@@ -8,6 +8,7 @@ import (
 
 	core "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func ConvertVolumeMount(src aiv1.VolumeMount) (core.VolumeMount, error) {
@@ -133,5 +134,58 @@ func ConvertConfigMapVolume(src aiv1.ConfigMapVolume) (*core.Volume, error) {
 				},
 			},
 		},
+	}, nil
+}
+
+func ConvertConfigMap(src aiv1.ConfigMap, data string) (core.ConfigMap, error) {
+	if src.Name == "" {
+		return core.ConfigMap{}, fmt.Errorf("convertor: empty Name for ConfigMap")
+	}
+
+	return core.ConfigMap{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      src.Name,
+			Namespace: env.Namespace(),
+		},
+		Data: map[string]string{
+			"data": data,
+		},
+	}, nil
+}
+
+func ConvertActor(src aiv1.Actor) (core.Container, error) {
+	dst := core.Container{}
+
+	volumeMounts := make([]core.VolumeMount, 0)
+	for _, vm := range src.VolumeMounts {
+		volumeMount, err := ConvertVolumeMount(vm)
+		if err != nil {
+			return dst, err
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	envVars := make([]core.EnvVar, 0)
+	for _, ev := range src.EnvVars {
+		envVar, err := ConvertEnvVar(ev)
+		if err != nil {
+			return dst, err
+		}
+		envVars = append(envVars, envVar)
+	}
+
+	resources, err := ConvertResources(src.Resources)
+	if err != nil {
+		return dst, err
+	}
+
+	return core.Container{
+		Name:         src.Name,
+		Image:        src.Image,
+		VolumeMounts: volumeMounts,
+		Env:          envVars,
+		Resources:    resources,
+		Args:         src.Args,
+		Command:      []string{"/bin/bash", "-c"},
 	}, nil
 }

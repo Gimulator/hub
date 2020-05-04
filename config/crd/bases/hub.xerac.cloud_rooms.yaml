@@ -40,6 +40,12 @@ spec:
             actors:
               items:
                 properties:
+                  args:
+                    items:
+                      type: string
+                    type: array
+                  command:
+                    type: string
                   env-var:
                     items:
                       properties:
@@ -96,6 +102,7 @@ spec:
                       type: object
                     type: array
                 required:
+                - command
                 - id
                 - image
                 - name
