@@ -34,10 +34,130 @@ spec:
         spec:
           description: RoomSpec defines the desired state of Room
           properties:
-            foo:
-              description: Foo is an example field of Room. Edit Room_types.go to
-                remove/update
-              type: string
+            active-dead-line-seconds:
+              format: int64
+              type: integer
+            actors:
+              items:
+                properties:
+                  env-var:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        value:
+                          type: string
+                      required:
+                      - key
+                      - value
+                      type: object
+                    type: array
+                  id:
+                    type: integer
+                  image:
+                    type: string
+                  name:
+                    type: string
+                  resources:
+                    properties:
+                      limits:
+                        properties:
+                          cpu:
+                            type: string
+                          ephemeral:
+                            type: string
+                          memory:
+                            type: string
+                        type: object
+                      requests:
+                        properties:
+                          cpu:
+                            type: string
+                          ephemeral:
+                            type: string
+                          memory:
+                            type: string
+                        type: object
+                    type: object
+                  role:
+                    type: string
+                  type:
+                    type: string
+                  volume-mount:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        path:
+                          type: string
+                      required:
+                      - name
+                      - path
+                      type: object
+                    type: array
+                required:
+                - id
+                - image
+                - name
+                - role
+                type: object
+              type: array
+            backoff-limit:
+              format: int32
+              type: integer
+            config-maps:
+              items:
+                properties:
+                  bucket:
+                    type: string
+                  key:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - bucket
+                - key
+                - name
+                type: object
+              type: array
+            id:
+              type: integer
+            sketch:
+              properties:
+                bucket:
+                  type: string
+                key:
+                  type: string
+              required:
+              - bucket
+              - key
+              type: object
+            volumes:
+              items:
+                properties:
+                  config-map:
+                    properties:
+                      config-map-name:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - config-map-name
+                    - name
+                    type: object
+                  empty-dir:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              type: array
+          required:
+          - actors
+          - id
+          - sketch
           type: object
         status:
           description: RoomStatus defines the observed state of Room

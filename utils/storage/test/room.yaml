@@ -1,0 +1,39 @@
+backoff-limit: 2
+active-dead-line-seconds: 30
+id: 123456
+gimulator-config-bucket: "bucket-gim"
+gimulator-config-key: "key-gim"
+containers:
+- name: "agent-team"
+  role: "agent"
+  command: "/app/agent"
+  image: "registery/agent:v1.0"
+  type: "slave-type"
+  id: 654321
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1G"
+    limits:
+      cpu: "500m"
+      memory: "1G"
+- name: "judge-team"
+  role: "judge"
+  command: "/app/judge"
+  image: "registery/judge:v1.0"
+  type: "master-type"
+  id: 654321
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1G"
+    limits:
+      cpu: "500m"
+      memory: "1G"
+  volumes:
+  - name: "judge-vol"
+    path: "/pod/judge"
+    read-only: false
+volumes:
+- name: "judge-vol"
+  empty-dir: {}
