@@ -74,6 +74,11 @@ const (
 	resourceLimitsEphemeralKey = "resource-limits-ephemeral"
 )
 
+const (
+	CacheExpirationTime  = time.Hour * 6
+	CacheCleanupInterval = time.Hour * 12
+)
+
 const FinisherArgs = `trap "touch %s" EXIT
 %s
 `
