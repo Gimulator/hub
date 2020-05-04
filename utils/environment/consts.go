@@ -27,13 +27,13 @@ const (
 	gimulatorConfigMapNameKey    = "gimulator-config-map-name"
 )
 
-const (
-	resultNameKey  = "result-name"
-	resultImageKey = "result-image"
-	resultTypeKey  = "result-type"
-	resultCmdKey   = "result-cmd"
-	resultRoleKey  = "result-role"
-)
+// const (
+// 	resultNameKey  = "result-name"
+// 	resultImageKey = "result-image"
+// 	resultTypeKey  = "result-type"
+// 	resultCmdKey   = "result-cmd"
+// 	resultRoleKey  = "result-role"
+// )
 
 const (
 	loggerNameKey  = "logger-name"

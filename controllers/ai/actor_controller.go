@@ -51,12 +51,6 @@ func (r *ActorReconciler) reconcileActors(actors []aiv1.Actor, containers []core
 	}
 	actorList = append(actorList, gimActor)
 
-	resActor, err := r.reconcileResultActor()
-	if err != nil {
-		return containers, err
-	}
-	actorList = append(actorList, resActor)
-
 	logActor, err := r.reconcileLoggerActor()
 	if err != nil {
 		return containers, err
@@ -202,27 +196,6 @@ func (r *ActorReconciler) reconcileGimulatorActor() (aiv1.Actor, error) {
 		Name:  env.GimulatorName(),
 		Image: env.GimulatorImage(),
 		Type:  aiv1.AIActorType(env.GimulatorType()),
-		Role:  "",
-		Resources: aiv1.Resources{
-			Limits: aiv1.Resource{
-				CPU:    "1000m",
-				Memory: "1G",
-			},
-			Requests: aiv1.Resource{
-				CPU:    "500m",
-				Memory: "500M",
-			},
-		},
-		EnvVars:      make([]aiv1.EnvVar, 0),
-		VolumeMounts: make([]aiv1.VolumeMount, 0),
-	}, nil
-}
-
-func (r *ActorReconciler) reconcileResultActor() (aiv1.Actor, error) {
-	return aiv1.Actor{
-		Name:  env.ResultName(),
-		Image: env.ResultImage(),
-		Type:  aiv1.AIActorType(env.ResultType()),
 		Role:  "",
 		Resources: aiv1.Resources{
 			Limits: aiv1.Resource{

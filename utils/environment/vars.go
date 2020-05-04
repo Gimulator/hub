@@ -21,11 +21,11 @@ func init() {
 	viper.SetDefault(gimulatorConfigVolumePathKey, "/config")
 	viper.SetDefault(gimulatorConfigMapNameKey, "gimulator-config-map")
 
-	viper.SetDefault(resultNameKey, "result")
-	viper.SetDefault(resultImageKey, "result:v1.0")
-	viper.SetDefault(resultTypeKey, Finisher)
-	viper.SetDefault(resultCmdKey, "/app/result")
-	viper.SetDefault(resultRoleKey, "resutl")
+	// viper.SetDefault(resultNameKey, "result")
+	// viper.SetDefault(resultImageKey, "result:v1.0")
+	// viper.SetDefault(resultTypeKey, Finisher)
+	// viper.SetDefault(resultCmdKey, "/app/result")
+	// viper.SetDefault(resultRoleKey, "resutl")
 
 	viper.SetDefault(loggerNameKey, "logger")
 	viper.SetDefault(loggerImageKey, "logger:v1.0")
@@ -75,11 +75,11 @@ func LoggerType() ContainerType { return Finisher }
 func LoggerCmd() string         { return viper.GetString(loggerCmdKey) }
 func LoggerRole() string        { return viper.GetString(loggerCmdKey) }
 
-func ResultName() string        { return viper.GetString(resultNameKey) }
-func ResultImage() string       { return viper.GetString(resultImageKey) }
-func ResultType() ContainerType { return Finisher }
-func ResultCmd() string         { return viper.GetString(resultCmdKey) }
-func ResultRole() string        { return viper.GetString(resultCmdKey) }
+// func ResultName() string        { return viper.GetString(resultNameKey) }
+// func ResultImage() string       { return viper.GetString(resultImageKey) }
+// func ResultType() ContainerType { return Finisher }
+// func ResultCmd() string         { return viper.GetString(resultCmdKey) }
+// func ResultRole() string        { return viper.GetString(resultCmdKey) }
 
 func SharedVolumeName() string { return viper.GetString(sharedVolumeNameKey) }
 func SharedVolumePath() string { return viper.GetString(sharedVolumePathKey) }
