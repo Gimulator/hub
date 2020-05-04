@@ -36,11 +36,13 @@ const (
 // )
 
 const (
-	loggerNameKey  = "logger-name"
-	loggerImageKey = "logger-image"
-	loggerTypeKey  = "logger-type"
-	loggerCmdKey   = "logger-cmd"
-	loggerRoleKey  = "logger-role"
+	loggerNameKey       = "logger-name"
+	loggerImageKey      = "logger-image"
+	loggerTypeKey       = "logger-type"
+	loggerCmdKey        = "logger-cmd"
+	loggerRoleKey       = "logger-role"
+	loggerLogDirNameKey = "logger-log-dir-name"
+	loggerLogDirPathKey = "logger-log-dir-path"
 )
 
 const (

@@ -32,6 +32,8 @@ func init() {
 	viper.SetDefault(loggerTypeKey, Finisher)
 	viper.SetDefault(loggerCmdKey, "/app/logger")
 	viper.SetDefault(loggerRoleKey, "logger")
+	viper.SetDefault(loggerLogDirNameKey, "logger-log-dir")
+	viper.SetDefault(loggerLogDirPathKey, "/tmp")
 
 	viper.SetDefault(sharedVolumeNameKey, "shared-volume")
 	viper.SetDefault(sharedVolumePathKey, "/tmp/pod")
@@ -82,6 +84,8 @@ func LoggerImage() string       { return viper.GetString(loggerImageKey) }
 func LoggerType() ContainerType { return Finisher }
 func LoggerCmd() string         { return viper.GetString(loggerCmdKey) }
 func LoggerRole() string        { return viper.GetString(loggerCmdKey) }
+func LoggerLogDirName() string  { return viper.GetString(loggerLogDirNameKey) }
+func LoggerLogDirPath() string  { return viper.GetString(loggerLogDirPathKey) }
 
 // func ResultName() string        { return viper.GetString(resultNameKey) }
 // func ResultImage() string       { return viper.GetString(resultImageKey) }
