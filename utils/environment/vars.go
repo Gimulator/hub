@@ -39,6 +39,14 @@ func init() {
 	viper.SetDefault(podNamePrefixKey, "room-")
 	viper.SetDefault(namespaceKey, "default")
 	viper.SetDefault(restartPolicyKey, "OnFailure")
+
+	viper.SetDefault(resourceRequestsCPUKey, "100m")
+	viper.SetDefault(resourceRequestsMemoryKey, "100M")
+	viper.SetDefault(resourceRequestsEphemeralKey, "10M")
+
+	viper.SetDefault(resourceLimitsCPUKey, "200m")
+	viper.SetDefault(resourceLimitsMemoryKey, "200M")
+	viper.SetDefault(resourceLimitsEphemeralKey, "20M")
 }
 
 func ReadEnvironments() {
@@ -87,3 +95,10 @@ func SharedVolumePath() string { return viper.GetString(sharedVolumePathKey) }
 func PodNamePrefix() string { return viper.GetString(podNamePrefixKey) }
 func Namespace() string     { return viper.GetString(namespaceKey) }
 func RestartPolicy() string { return viper.GetString(restartPolicyKey) }
+
+func ResourceRequestsCPU() string       { return viper.GetString(resourceRequestsCPUKey) }
+func ResourceRequestsMemory() string    { return viper.GetString(resourceRequestsMemoryKey) }
+func ResourceRequestsEphemeral() string { return viper.GetString(resourceRequestsEphemeralKey) }
+func ResourceLimitsCPU() string         { return viper.GetString(resourceLimitsCPUKey) }
+func ResourceLimitsMemory() string      { return viper.GetString(resourceLimitsMemoryKey) }
+func ResourceLimitsEphemeral() string   { return viper.GetString(resourceLimitsEphemeralKey) }

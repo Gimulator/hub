@@ -64,6 +64,16 @@ const (
 	APICallTimeout = time.Second * 5
 )
 
+const (
+	resourceRequestsCPUKey       = "resource-requests-cpu"
+	resourceRequestsMemoryKey    = "resource-requests-memory"
+	resourceRequestsEphemeralKey = "resource-requests-ephemeral"
+
+	resourceLimitsCPUKey       = "resource-limits-cpu"
+	resourceLimitsMemoryKey    = "resource-limits-memory"
+	resourceLimitsEphemeralKey = "resource-limits-ephemeral"
+)
+
 const FinisherArgs = `trap "touch %s" EXIT
 %s
 `
