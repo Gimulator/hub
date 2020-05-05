@@ -18,11 +18,18 @@ package ai
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/Gimulator/Gimulator/auth"
 	"github.com/go-logr/logr"
+	uuid "github.com/satori/go.uuid"
+	"gitlab.com/Syfract/Xerac/hub/utils/cache"
 	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
-	batch "k8s.io/api/batch/v1"
+	"gitlab.com/Syfract/Xerac/hub/utils/name"
+	"gitlab.com/Syfract/Xerac/hub/utils/storage"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,45 +45,17 @@ import (
 // RoomReconciler reconciles a Room object
 type RoomReconciler struct {
 	client.Client
-	log                 logr.Logger
-	Scheme              *runtime.Scheme
-	deployer            *deployer.Deployer
-	actorReconciler     *ActorReconciler
-	configMapReconciler *ConfigMapReconciler
-	sketchReconciler    *SketchReconciler
-	volumeReconciler    *VolumeReconciler
+	log      logr.Logger
+	Scheme   *runtime.Scheme
+	deployer *deployer.Deployer
 }
 
 func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, error) {
-	ar, err := NewActorReconciler(log.WithName("actor"))
-	if err != nil {
-		return nil, err
-	}
-
-	vr, err := NewVolumeReconciler(log.WithName("volume"))
-	if err != nil {
-		return nil, err
-	}
-
-	sr, err := NewSketchReconciler(mgr, log.WithName("sketch"))
-	if err != nil {
-		return nil, err
-	}
-
-	cr, err := NewConfigMapReconciler(mgr, log.WithName("configmap"))
-	if err != nil {
-		return nil, err
-	}
-
 	return &RoomReconciler{
-		Client:              mgr.GetClient(),
-		log:                 log,
-		Scheme:              mgr.GetScheme(),
-		deployer:            deployer.NewDeployer(mgr.GetClient()),
-		actorReconciler:     ar,
-		configMapReconciler: cr,
-		sketchReconciler:    sr,
-		volumeReconciler:    vr,
+		Client:   mgr.GetClient(),
+		log:      log,
+		Scheme:   mgr.GetScheme(),
+		deployer: deployer.NewDeployer(mgr.GetClient()),
 	}, nil
 }
 
@@ -97,35 +76,262 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	job := &batch.Job{}
-
-	r.log.Info("reconcile actor")
-	if err := r.actorReconciler.Reconcile(instance, job); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.log.Info("reconcile volume")
-	if err := r.volumeReconciler.Reconcile(instance, job); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.log.Info("reconcile config map")
-	if err := r.configMapReconciler.Reconcile(instance, job); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.log.Info("reconcile sketch")
-	if err := r.sketchReconciler.Reconcile(instance, job); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.log.Info("deploy")
-	_, err := r.deployer.SyncJob(job)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	return ctrl.Result{}, nil
+}
+
+// ********************************* reconcile actors *********************************
+
+func (r *RoomReconciler) reconcileActors(src, dst *aiv1.Room) error {
+	if err := r.reconcileGimulatorActor(src, dst); err != nil {
+		return err
+	}
+
+	if err := r.reconcileLoggerActor(src, dst); err != nil {
+		return err
+	}
+
+	if err := r.reconcileArgs(src, dst); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RoomReconciler) reconcileGimulatorActor(src, dst *aiv1.Room) error {
+	dst.Spec.Actors = append(dst.Spec.Actors, aiv1.Actor{
+		Name:    env.GimulatorName(),
+		ID:      env.GimulatorID(),
+		Image:   env.GimulatorImage(),
+		Type:    aiv1.AIActorType(env.GimulatorType()),
+		Command: env.GimulatorCmd(),
+		Resources: aiv1.Resources{
+			Limits: aiv1.Resource{
+				CPU:       env.GimulatorResourceLimitsCPU(),
+				Memory:    env.GimulatorResourceLimitsMemory(),
+				Ephemeral: env.GimulatorResourceLimitsEphemeral(),
+			},
+			Requests: aiv1.Resource{
+				CPU:       env.GimulatorResourceRequestsCPU(),
+				Memory:    env.GimulatorResourceRequestsMemory(),
+				Ephemeral: env.GimulatorResourceRequestsEphemeral(),
+			},
+		},
+		EnvVars: make([]aiv1.EnvVar, 0),
+		VolumeMounts: []aiv1.VolumeMount{
+			{
+				Name: env.GimulatorConfigVolumeName(),
+				Path: env.GimulatorConfigVolumePath(),
+			},
+		},
+	})
+	return nil
+}
+
+func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
+	dst.Spec.Actors = append(dst.Spec.Actors, aiv1.Actor{
+		Name:    env.LoggerName(),
+		ID:      env.LoggerID(),
+		Image:   env.LoggerImage(),
+		Type:    aiv1.AIActorType(env.LoggerType()),
+		Command: env.LoggerCmd(),
+		Resources: aiv1.Resources{
+			Limits: aiv1.Resource{
+				CPU:       env.LoggerResourceLimitsCPU(),
+				Memory:    env.LoggerResourceLimitsMemory(),
+				Ephemeral: env.LoggerResourceLimitsEphemeral(),
+			},
+			Requests: aiv1.Resource{
+				CPU:       env.LoggerResourceRequestsCPU(),
+				Memory:    env.LoggerResourceRequestsMemory(),
+				Ephemeral: env.LoggerResourceRequestsEphemeral(),
+			},
+		},
+		EnvVars:      make([]aiv1.EnvVar, 0),
+		VolumeMounts: make([]aiv1.VolumeMount, 0),
+	})
+	return nil
+}
+
+func (r *RoomReconciler) reconcileArgs(src, dst *aiv1.Room) error {
+	condition := ""
+	for _, actor := range dst.Spec.Actors {
+		if actor.Type != aiv1.AIActorTypeFinisher {
+			continue
+		}
+		path := filepath.Join(env.SharedVolumePath(), name.TerminatedFileName(actor.Name))
+		condition += fmt.Sprintf("-f %s && ", path)
+	}
+	condition += "true"
+
+	for i := range dst.Spec.Actors {
+		actor := &dst.Spec.Actors[i]
+
+		switch actor.Type {
+		case aiv1.AIActorTypeFinisher:
+			path := filepath.Join(env.SharedVolumePath(), name.TerminatedFileName(actor.Name))
+			actor.Args = []string{fmt.Sprintf(env.FinisherArgs, path, actor.Command)}
+		case aiv1.AIActorTypeMaster:
+			actor.Args = []string{fmt.Sprintf(env.MasterArgs, actor.Command, condition, condition)}
+		case aiv1.AIActorTypeSlave:
+			actor.Args = []string{fmt.Sprintf(env.SlaveArgs, actor.Command, condition)}
+		default:
+			return fmt.Errorf("invalid actor type")
+		}
+	}
+	return nil
+}
+
+// ********************************* reconcile config maps *********************************
+
+func (r *RoomReconciler) reconcileConfigMaps(src, dst *aiv1.Room) error {
+	for _, cm := range src.Spec.ConfigMaps {
+
+		if cm.Data != "" {
+			continue
+		}
+
+		name := name.ConfigMapName(cm.Bucket, cm.Name)
+		data, err := cache.GetYamlString(name)
+		if err != nil {
+			data, err = storage.Get(cm.Bucket, cm.Key)
+			if err != nil {
+				return err
+			}
+			cache.SetYamlString(name, data)
+		}
+
+		dst.Spec.ConfigMaps = append(dst.Spec.ConfigMaps, aiv1.ConfigMap{
+			Name:   cm.Name,
+			Bucket: cm.Bucket,
+			Key:    cm.Key,
+			Data:   data,
+		})
+	}
+	return nil
+}
+
+// ********************************* reconcile sektch *********************************
+
+func (r *RoomReconciler) reconcileSketch(src, dst *aiv1.Room) error {
+	sketch, err := r.reconcilePrimitiveSketch(src, dst)
+	if err != nil {
+		return err
+	}
+
+	for i := range dst.Spec.Actors {
+		actor := &dst.Spec.Actors[i]
+
+		if actor.Name == env.GimulatorName() {
+			continue
+		}
+
+		role := actor.Role
+		username := name.ContainerName(actor.Name, actor.ID)
+		password := uuid.NewV4().String()
+
+		sketch.Actors = append(sketch.Actors, auth.Actor{
+			Role:     role,
+			Username: username,
+			Password: password,
+		})
+
+		actor.EnvVars = append(actor.EnvVars,
+			aiv1.EnvVar{Key: env.UsernameEnvVarKey, Value: username},
+			aiv1.EnvVar{Key: env.PasswordEnvVarKey, Value: password},
+		)
+	}
+
+	return r.reconcileFinalSketch(src, dst, sketch)
+}
+
+func (r *RoomReconciler) reconcilePrimitiveSketch(src, dst *aiv1.Room) (*auth.Config, error) {
+	sketch := &auth.Config{}
+
+	for _, cm := range dst.Spec.ConfigMaps {
+		if cm.Name != dst.Spec.Sketch {
+			continue
+		}
+
+		data := cm.Data
+		err := yaml.Unmarshal([]byte(data), sketch)
+		if err != nil {
+			return nil, err
+		}
+		return sketch, nil
+	}
+	return nil, fmt.Errorf("can not find sketch config map")
+}
+
+func (r *RoomReconciler) reconcileFinalSketch(src, dst *aiv1.Room, sketch *auth.Config) error {
+	for _, cm := range dst.Spec.ConfigMaps {
+		if cm.Name != dst.Spec.Sketch {
+			continue
+		}
+
+		b, err := yaml.Marshal(sketch)
+		if err != nil {
+			return err
+		}
+		cm.Data = string(b)
+
+		return nil
+	}
+	return fmt.Errorf("can not find sketch config map")
+}
+
+// ********************************* reconcile volumes *********************************
+
+func (r *RoomReconciler) reconcileVolumes(src, dst *aiv1.Room) error {
+	if dst.Spec.Volumes == nil {
+		dst.Spec.Volumes = make([]aiv1.Volume, 0)
+	}
+
+	if err := r.reconcileSharedVolumes(src, dst); err != nil {
+		return err
+	}
+
+	if err := r.reconcileGimulatorVolume(src, dst); err != nil {
+		return err
+	}
+
+	if err := r.reconcileLoggerVolume(src, dst); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RoomReconciler) reconcileSharedVolumes(src, dst *aiv1.Room) error {
+	sharedVolume := aiv1.Volume{
+		EmptyDirVolume: &aiv1.EmptyDirVolume{
+			Name: env.SharedVolumeName(),
+		},
+	}
+	dst.Spec.Volumes = append(dst.Spec.Volumes, sharedVolume)
+
+	return nil
+}
+
+func (r *RoomReconciler) reconcileGimulatorVolume(src, dst *aiv1.Room) error {
+	gimulatorVolume := aiv1.Volume{
+		EmptyDirVolume: &aiv1.EmptyDirVolume{
+			Name: env.GimulatorConfigVolumeName(),
+		},
+	}
+	dst.Spec.Volumes = append(dst.Spec.Volumes, gimulatorVolume)
+
+	return nil
+}
+
+func (r *RoomReconciler) reconcileLoggerVolume(src, dst *aiv1.Room) error {
+	loggerVolume := aiv1.Volume{
+		EmptyDirVolume: &aiv1.EmptyDirVolume{
+			Name: env.LoggerLogDirName(),
+		},
+	}
+	dst.Spec.Volumes = append(dst.Spec.Volumes, loggerVolume)
+
+	return nil
 }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
