@@ -7,7 +7,9 @@ require (
 	github.com/aws/aws-sdk-go v1.30.19
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
+	github.com/go-ini/ini v1.55.0 // indirect
 	github.com/go-logr/logr v0.1.0
+	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible

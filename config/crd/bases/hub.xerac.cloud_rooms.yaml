@@ -117,28 +117,20 @@ spec:
                 properties:
                   bucket:
                     type: string
+                  data:
+                    type: string
                   key:
                     type: string
                   name:
                     type: string
                 required:
-                - bucket
-                - key
                 - name
                 type: object
               type: array
             id:
               type: integer
             sketch:
-              properties:
-                bucket:
-                  type: string
-                key:
-                  type: string
-              required:
-              - bucket
-              - key
-              type: object
+              type: string
             volumes:
               items:
                 properties:

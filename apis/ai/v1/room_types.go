@@ -14,9 +14,9 @@ type RoomSpec struct {
 	ID                    int         `json:"id"`
 	BackoffLimit          int32       `json:"backoff-limit,omitempty"`
 	ActiveDeadLineSeconds int64       `json:"active-dead-line-seconds,omitempty"`
+	Sketch                string      `json:"sketch"`
 	Actors                []Actor     `json:"actors"`
 	Volumes               []Volume    `json:"volumes,omitempty"`
-	Sketch                Sketch      `json:"sketch"`
 	ConfigMaps            []ConfigMap `json:"config-maps,omitempty"`
 }
 
