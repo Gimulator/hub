@@ -19,30 +19,40 @@ const (
 
 const (
 	gimulatorNameKey             = "gimulator-name"
+	gimulatorIDKey               = "gimulator-id"
 	gimulatorImageKey            = "gimulator-image"
 	gimulatorTypeKey             = "gimulator-type"
 	gimulatorCmdKey              = "gimulator-cmd"
 	gimulatorConfigVolumeNameKey = "gimulator-config-volume-name"
 	gimulatorConfigVolumePathKey = "gimulator-config-volume-path"
 	gimulatorConfigMapNameKey    = "gimulator-config-map-name"
-)
 
-// const (
-// 	resultNameKey  = "result-name"
-// 	resultImageKey = "result-image"
-// 	resultTypeKey  = "result-type"
-// 	resultCmdKey   = "result-cmd"
-// 	resultRoleKey  = "result-role"
-// )
+	gimulatorResourceRequestsCPUKey       = "gimulator-resource-requests-cpu"
+	gimulatorResourceRequestsMemoryKey    = "gimulator-resource-requests-memory"
+	gimulatorResourceRequestsEphemeralKey = "gimulator-resource-requests-ephemeral"
+
+	gimulatorResourceLimitsCPUKey       = "gimulator-resource-limits-cpu"
+	gimulatorResourceLimitsMemoryKey    = "gimulator-resource-limits-memory"
+	gimulatorResourceLimitsEphemeralKey = "gimulator-resource-limits-ephemeral"
+)
 
 const (
 	loggerNameKey       = "logger-name"
+	loggerIDKey         = "logger-id"
 	loggerImageKey      = "logger-image"
 	loggerTypeKey       = "logger-type"
 	loggerCmdKey        = "logger-cmd"
 	loggerRoleKey       = "logger-role"
 	loggerLogDirNameKey = "logger-log-dir-name"
 	loggerLogDirPathKey = "logger-log-dir-path"
+
+	loggerResourceRequestsCPUKey       = "logger-resource-requests-cpu"
+	loggerResourceRequestsMemoryKey    = "logger-resource-requests-memory"
+	loggerResourceRequestsEphemeralKey = "logger-resource-requests-ephemeral"
+
+	loggerResourceLimitsCPUKey       = "logger-resource-limits-cpu"
+	loggerResourceLimitsMemoryKey    = "logger-resource-limits-memory"
+	loggerResourceLimitsEphemeralKey = "logger-resource-limits-ephemeral"
 )
 
 const (

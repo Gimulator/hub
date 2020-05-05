@@ -9,7 +9,7 @@ import (
 	aiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
 	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
 	"gitlab.com/Syfract/Xerac/hub/utils/name"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type SketchReconciler struct {
