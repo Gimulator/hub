@@ -1,0 +1,52 @@
+apiVersion: hub.xerac.cloud/v1
+kind: Room
+metadata:
+  name: "room-id"                         #           # must be unique, can be the postgres id of the 'run' model
+spec: 
+  backoff-limit: 2                        # omitempty # Read the manifest of kubernetes's jobs
+  active-dead-line-seconds: 30            # omitempty # Read the manifest of kubernetes's jobs
+  id: 123456                              #           # Postgres ID of the 'run' model
+  sketch: "gimulator-roles"               #           # It points to one configmap in spec.config-map which containes information about 'roles.yaml' file
+  actors:                                            
+  - name: "agent-team"                    #           # Name of the team or person
+    role: "agent"                         #           # Role of this components in the room, It's important for filling the 'roles.yaml' file
+    image: "registery/agent:v1.0"         #           # URL of docker registery
+    command: "/bin/agent"                 #           # Docker command to run this container
+    type: "slave"                         #           # Should fill with [slave, master, finisher], 
+    id: 654321                            #           # ID of database for submission
+    resources:                            # omitempty # Requests and Limits of resources that the container needs
+      requests:                           # omitempty # See Kubernetes's document
+        cpu: "500m"                       # omitempty # See Kubernetes's document
+        memory: "1G"                      # omitempty # See Kubernetes's document
+        ephemeral: "30M"                  # omitempty # See Kubernetes's document
+      limits:                             # omitempty # See Kubernetes's document
+        cpu: "500m"                       # omitempty # See Kubernetes's document
+        memory: "1G"                      # omitempty # See Kubernetes's document
+        ephemeral: "30M"                  # omitempty # See Kubernetes's document
+    volume-mounts:                        # omitempty # Volumes this actor needs
+    - name: "agent-vol"                   #           # This name points to one volume in spec.volumes
+      path: "/path/to/mount"              #           # It shows where this volume should be mounted
+      read-only: false                    # omitempty # Default false
+    - name: "agent-config"
+      path: "/path/to/mount"
+    env-vars:                             # omitempty # Environmet variable this actor needs
+    - key: "key"                          #           # Name of the env-var
+      value: "value"                      #           # Value of the env-var
+  - name: "judge-team"
+    role: "judge"
+    image: "registery/judge:v1.0"
+    command: "/bin/judge"
+    type: "master"
+    id: 654321
+  volumes:                                # omitempty # If actors specify one volume, You must enter its details here
+  - empty-dir:                            #           # EmptyDir is a empty directory and is mounted from the host
+      name: "agent-vol"                   #           # This name connects this volume to actor's volumes
+  - config-map:                           #           # ConfigMap is also a directory, but it fills up with one config-map file in spec.config-maps
+      name: "agent-config"                #           # This name connects this volume to actor's volumes
+      config-map-name: "agent-configmap"  #           # This name points to one config-map in spec.config-maps
+  config-maps:                            # omitempty # This section containes every config file which should be mounted to containers. You can set s3's credential or directly data
+  - name: "agent-configmap"               #           # This name is used in spec.sketch or spec.volumes.config-map
+    bucket: "/foo/bar"                    # omitempty # Bucket name of the config-map in S3
+    key: "baz.yaml"                       # omitempty # Object(key) name of the config-map in S3
+  - name: "gimulator-roles"               #           # This name is used in spec.sketch or spec.volumes.config-map
+    data: "some yaml string"              # omitempty # You can directly set the data of this config file instead of s3's credentials

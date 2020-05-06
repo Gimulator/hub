@@ -37,7 +37,7 @@ type Actor struct {
 	Command      string        `json:"command"`
 	Args         []string      `json:"args,omitempty"`
 	Type         AIActorType   `json:"type,omitempty"`
-	EnvVars      []EnvVar      `json:"env-var,omitempty"`
-	VolumeMounts []VolumeMount `json:"volume-mount,omitempty"`
+	EnvVars      []EnvVar      `json:"env-vars,omitempty"`
+	VolumeMounts []VolumeMount `json:"volume-mounts,omitempty"`
 	Resources    Resources     `json:"resources,omitempty"`
 }
