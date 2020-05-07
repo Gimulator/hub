@@ -10,7 +10,7 @@ var s *minio.Client
 
 func init() {
 	var err error
-	s, err = minio.New(env.S3URL(), env.S3AccessKey(), env.S3SecretKey(), false)
+	s, err = minio.NewV2(env.S3URL(), env.S3AccessKey(), env.S3SecretKey(), false)
 	if err != nil {
 		panic(err)
 	}
@@ -21,8 +21,14 @@ func Get(bucket, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer obj.Close()
 
-	var b []byte
+	stat, err := obj.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	b := make([]byte, stat.Size-1)
 	_, err = obj.Read(b)
 	if err != nil {
 		return "", err
@@ -36,7 +42,12 @@ func GetStruct(bucket, name string, i interface{}) error {
 		return err
 	}
 
-	var b []byte
+	stat, err := obj.Stat()
+	if err != nil {
+		return err
+	}
+
+	b := make([]byte, stat.Size-1)
 	_, err = obj.Read(b)
 	if err != nil {
 		return err

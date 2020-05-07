@@ -46,7 +46,7 @@ spec:
                     type: array
                   command:
                     type: string
-                  env-var:
+                  env-vars:
                     items:
                       properties:
                         key:
@@ -89,7 +89,7 @@ spec:
                     type: string
                   type:
                     type: string
-                  volume-mount:
+                  volume-mounts:
                     items:
                       properties:
                         name:

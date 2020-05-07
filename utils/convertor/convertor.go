@@ -5,6 +5,7 @@ import (
 
 	aiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
 	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
+	"gitlab.com/Syfract/Xerac/hub/utils/name"
 
 	core "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -180,7 +181,7 @@ func ConvertActor(src aiv1.Actor) (core.Container, error) {
 	}
 
 	return core.Container{
-		Name:         src.Name,
+		Name:         name.ContainerName(src.Name, src.ID),
 		Image:        src.Image,
 		VolumeMounts: volumeMounts,
 		Env:          envVars,
