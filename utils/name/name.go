@@ -10,6 +10,10 @@ func ContainerName(name string, id int) string {
 	return fmt.Sprintf("%s-%d", name, id)
 }
 
+func JobName(id int) string {
+	return fmt.Sprintf("job-%d", id)
+}
+
 func TerminatedFileName(name string) string {
 	return fmt.Sprintf("%s-terminated", name)
 }
