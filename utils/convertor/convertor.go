@@ -7,6 +7,7 @@ import (
 	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
 	"gitlab.com/Syfract/Xerac/hub/utils/name"
 
+	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,12 +102,28 @@ func ConvertResourceLimits(src aiv1.Resource) (core.ResourceList, error) {
 	}, nil
 }
 
-func ConvertEmptyDirVolume(src aiv1.EmptyDirVolume) (*core.Volume, error) {
-	if src.Name == "" {
-		return nil, fmt.Errorf("convertor: empty Name for EmptyDirVolume")
+func ConvertVolume(src aiv1.Volume) (core.Volume, error) {
+	if src.ConfigMapVolumes != nil && src.EmptyDirVolume != nil {
+		return core.Volume{}, fmt.Errorf("convertor: EmptyDir and ConfigMap both are not nil")
 	}
 
-	return &core.Volume{
+	if src.ConfigMapVolumes != nil {
+		return ConvertConfigMapVolume(src.ConfigMapVolumes)
+	}
+
+	if src.EmptyDirVolume != nil {
+		return ConvertEmptyDirVolume(src.EmptyDirVolume)
+	}
+
+	return core.Volume{}, fmt.Errorf("convertor: EmptyDir and ConfigMap both are nil")
+}
+
+func ConvertEmptyDirVolume(src *aiv1.EmptyDirVolume) (core.Volume, error) {
+	if src.Name == "" {
+		return core.Volume{}, fmt.Errorf("convertor: empty Name for EmptyDirVolume")
+	}
+
+	return core.Volume{
 		Name: src.Name,
 		VolumeSource: core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{},
@@ -114,16 +131,16 @@ func ConvertEmptyDirVolume(src aiv1.EmptyDirVolume) (*core.Volume, error) {
 	}, nil
 }
 
-func ConvertConfigMapVolume(src aiv1.ConfigMapVolume) (*core.Volume, error) {
+func ConvertConfigMapVolume(src *aiv1.ConfigMapVolume) (core.Volume, error) {
 	if src.Name == "" {
-		return nil, fmt.Errorf("convertor: empty Name for ConfigMapVolume")
+		return core.Volume{}, fmt.Errorf("convertor: empty Name for ConfigMapVolume")
 	}
 
 	if src.ConfigMapName == "" {
-		return nil, fmt.Errorf("convertor: empty ConfigMapName for ConfigMapVolume")
+		return core.Volume{}, fmt.Errorf("convertor: empty ConfigMapName for ConfigMapVolume")
 	}
 
-	return &core.Volume{
+	return core.Volume{
 		Name: src.Name,
 		VolumeSource: core.VolumeSource{
 			ConfigMap: &core.ConfigMapVolumeSource{
@@ -134,22 +151,6 @@ func ConvertConfigMapVolume(src aiv1.ConfigMapVolume) (*core.Volume, error) {
 					{Key: "data"}, //TODO: Fix hardcode
 				},
 			},
-		},
-	}, nil
-}
-
-func ConvertConfigMap(src aiv1.ConfigMap, data string) (core.ConfigMap, error) {
-	if src.Name == "" {
-		return core.ConfigMap{}, fmt.Errorf("convertor: empty Name for ConfigMap")
-	}
-
-	return core.ConfigMap{
-		ObjectMeta: meta.ObjectMeta{
-			Name:      src.Name,
-			Namespace: env.Namespace(),
-		},
-		Data: map[string]string{
-			"data": data,
 		},
 	}, nil
 }
@@ -189,4 +190,53 @@ func ConvertActor(src aiv1.Actor) (core.Container, error) {
 		Args:         src.Args,
 		Command:      []string{"/bin/bash", "-c"},
 	}, nil
+}
+
+func ConvertConfigMap(src aiv1.ConfigMap) (*core.ConfigMap, error) {
+	if src.Name == "" {
+		return &core.ConfigMap{}, fmt.Errorf("convertor: empty Name for ConfigMap")
+	}
+
+	return &core.ConfigMap{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      src.Name,
+			Namespace: env.Namespace(),
+		},
+		Data: map[string]string{
+			"data": src.Data,
+		},
+	}, nil
+}
+
+func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
+	dst := &batch.Job{
+		Spec: batch.JobSpec{
+			BackoffLimit:          &src.Spec.BackoffLimit,
+			ActiveDeadlineSeconds: &src.Spec.ActiveDeadLineSeconds,
+			Template: core.PodTemplateSpec{
+				Spec: core.PodSpec{
+					Volumes:    make([]core.Volume, 0),
+					Containers: make([]core.Container, 0),
+				},
+			},
+		},
+	}
+
+	for _, actor := range src.Spec.Actors {
+		container, err := ConvertActor(actor)
+		if err != nil {
+			return &batch.Job{}, err
+		}
+		dst.Spec.Template.Spec.Containers = append(dst.Spec.Template.Spec.Containers, container)
+	}
+
+	for _, v := range src.Spec.Volumes {
+		volume, err := ConvertVolume(v)
+		if err != nil {
+			return &batch.Job{}, err
+		}
+		dst.Spec.Template.Spec.Volumes = append(dst.Spec.Template.Spec.Volumes, volume)
+	}
+
+	return dst, nil
 }
