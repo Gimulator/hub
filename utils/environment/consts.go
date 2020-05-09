@@ -3,10 +3,51 @@ package environment
 import "time"
 
 const (
-	s3AccessKeyKey = "s3-access-key"
-	s3SecretKeyKey = "s3-secret-key"
-	s3TokenKey     = "s3-token-key"
-	s3URLKey       = "s3-url-key"
+	keyS3AccessKey = "s3-access-key"
+	keyS3SecretKey = "s3-secret-key"
+	keyS3URL       = "s3-url"
+
+	keyGimulatorName                      = "gimulator-name"
+	keyGimulatorID                        = "gimulator-id"
+	keyGimulatorImage                     = "gimulator-image"
+	keyGimulatorType                      = "gimulator-type"
+	keyGimulatorCmd                       = "gimulator-command"
+	keyGimulatorConfigVolumeName          = "gimulator-config-volume-name"
+	keyGimulatorConfigVolumePath          = "gimulator-config-volume-path"
+	keyGimulatorConfigMapName             = "gimulator-config-map-name"
+	keyGimulatorResourceRequestsCPU       = "gimulator-resource-requests-cpu"
+	keyGimulatorResourceRequestsMemory    = "gimulator-resource-requests-memory"
+	keyGimulatorResourceRequestsEphemeral = "gimulator-resource-requests-ephemeral"
+	keyGimulatorResourceLimitsCPU         = "gimulator-resource-limits-cpu"
+	keyGimulatorResourceLimitsMemory      = "gimulator-resource-limits-memory"
+	keyGimulatorResourceLimitsEphemeral   = "gimulator-resource-limits-ephemeral"
+
+	keyLoggerName                      = "logger-name"
+	keyLoggerID                        = "logger-id"
+	keyLoggerImage                     = "logger-image"
+	keyLoggerType                      = "logger-type"
+	keyLoggerCmd                       = "logger-command"
+	keyLoggerRole                      = "logger-role"
+	keyLoggerLogDirName                = "logger-log-dir-name"
+	keyLoggerLogDirPath                = "logger-log-dir-path"
+	keyLoggerResourceRequestsCPU       = "logger-resource-requests-cpu"
+	keyLoggerResourceRequestsMemory    = "logger-resource-requests-memory"
+	keyLoggerResourceRequestsEphemeral = "logger-resource-requests-ephemeral"
+	keyLoggerResourceLimitsCPU         = "logger-resource-limits-cpu"
+	keyLoggerResourceLimitsMemory      = "logger-resource-limits-memory"
+	keyLoggerResourceLimitsEphemeral   = "logger-resource-limits-ephemeral"
+
+	keySharedVolumeName = "shared-volume-name"
+	keySharedVolumePath = "shared-volume-path"
+
+	keyNamespace = "namespace"
+
+	keyDefaultResourceRequestsCPU       = "default-resource-requests-cpu"
+	keyDefaultResourceRequestsMemory    = "default-resource-requests-memory"
+	keyDefaultResourceRequestsEphemeral = "default-resource-requests-ephemeral"
+	keyDefaultResourceLimitsCPU         = "default-resource-limits-cpu"
+	keyDefaultResourceLimitsMemory      = "default-resource-limits-memory"
+	keyDefaultResourceLimitsEphemeral   = "default-resource-limits-ephemeral"
 )
 
 type ContainerType string
@@ -15,78 +56,13 @@ const (
 	Finisher ContainerType = "finisher"
 	Master   ContainerType = "master"
 	Slave    ContainerType = "slave"
-)
 
-const (
-	gimulatorNameKey             = "gimulator-name"
-	gimulatorIDKey               = "gimulator-id"
-	gimulatorImageKey            = "gimulator-image"
-	gimulatorTypeKey             = "gimulator-type"
-	gimulatorCmdKey              = "gimulator-cmd"
-	gimulatorConfigVolumeNameKey = "gimulator-config-volume-name"
-	gimulatorConfigVolumePathKey = "gimulator-config-volume-path"
-	gimulatorConfigMapNameKey    = "gimulator-config-map-name"
-
-	gimulatorResourceRequestsCPUKey       = "gimulator-resource-requests-cpu"
-	gimulatorResourceRequestsMemoryKey    = "gimulator-resource-requests-memory"
-	gimulatorResourceRequestsEphemeralKey = "gimulator-resource-requests-ephemeral"
-
-	gimulatorResourceLimitsCPUKey       = "gimulator-resource-limits-cpu"
-	gimulatorResourceLimitsMemoryKey    = "gimulator-resource-limits-memory"
-	gimulatorResourceLimitsEphemeralKey = "gimulator-resource-limits-ephemeral"
-)
-
-const (
-	loggerNameKey       = "logger-name"
-	loggerIDKey         = "logger-id"
-	loggerImageKey      = "logger-image"
-	loggerTypeKey       = "logger-type"
-	loggerCmdKey        = "logger-cmd"
-	loggerRoleKey       = "logger-role"
-	loggerLogDirNameKey = "logger-log-dir-name"
-	loggerLogDirPathKey = "logger-log-dir-path"
-
-	loggerResourceRequestsCPUKey       = "logger-resource-requests-cpu"
-	loggerResourceRequestsMemoryKey    = "logger-resource-requests-memory"
-	loggerResourceRequestsEphemeralKey = "logger-resource-requests-ephemeral"
-
-	loggerResourceLimitsCPUKey       = "logger-resource-limits-cpu"
-	loggerResourceLimitsMemoryKey    = "logger-resource-limits-memory"
-	loggerResourceLimitsEphemeralKey = "logger-resource-limits-ephemeral"
-)
-
-const (
 	UsernameEnvVarKey = "username"
 	PasswordEnvVarKey = "password"
-	RoleEnvVarKey     = "Role"
-)
+	RoleEnvVarKey     = "role"
 
-const (
-	sharedVolumeNameKey = "shared-volume-name"
-	sharedVolumePathKey = "shared-volume-path"
-)
-
-const (
-	podNamePrefixKey = "pod-prefix"
-	namespaceKey     = "namespace"
-	restartPolicyKey = "restart-policy"
-)
-
-const (
 	APICallTimeout = time.Second * 5
-)
 
-const (
-	resourceRequestsCPUKey       = "resource-requests-cpu"
-	resourceRequestsMemoryKey    = "resource-requests-memory"
-	resourceRequestsEphemeralKey = "resource-requests-ephemeral"
-
-	resourceLimitsCPUKey       = "resource-limits-cpu"
-	resourceLimitsMemoryKey    = "resource-limits-memory"
-	resourceLimitsEphemeralKey = "resource-limits-ephemeral"
-)
-
-const (
 	CacheExpirationTime  = time.Hour * 6
 	CacheCleanupInterval = time.Hour * 12
 )

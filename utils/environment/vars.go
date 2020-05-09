@@ -8,209 +8,206 @@ import (
 )
 
 func init() {
-	viper.SetDefault(s3AccessKeyKey, "default-value")
-	viper.SetDefault(s3SecretKeyKey, "default-value")
-	viper.SetDefault(s3TokenKey, "default-value")
-	viper.SetDefault(s3URLKey, "default-value")
+	viper.SetDefault(keyGimulatorName, "gimulator")
+	viper.SetDefault(keyGimulatorID, 123)
+	viper.SetDefault(keyGimulatorImage, "gimulator:v1.0")
+	viper.SetDefault(keyGimulatorType, Master)
+	viper.SetDefault(keyGimulatorCmd, "/app/result")
+	viper.SetDefault(keyGimulatorConfigVolumeName, "gimulator-config-path")
+	viper.SetDefault(keyGimulatorConfigVolumePath, "/config")
+	viper.SetDefault(keyGimulatorConfigMapName, "gimulator-config-map")
+	viper.SetDefault(keyGimulatorResourceRequestsCPU, "200m")
+	viper.SetDefault(keyGimulatorResourceRequestsMemory, "500M")
+	viper.SetDefault(keyGimulatorResourceRequestsEphemeral, "10M")
+	viper.SetDefault(keyGimulatorResourceLimitsCPU, "400m")
+	viper.SetDefault(keyGimulatorResourceLimitsMemory, "1G")
+	viper.SetDefault(keyGimulatorResourceLimitsEphemeral, "20M")
 
-	viper.SetDefault(gimulatorNameKey, "gimulator")
-	viper.SetDefault(gimulatorIDKey, 123456789)
-	viper.SetDefault(gimulatorImageKey, "gimulator:v1.0")
-	viper.SetDefault(gimulatorTypeKey, Master)
-	viper.SetDefault(gimulatorCmdKey, "/app/result")
-	viper.SetDefault(gimulatorConfigVolumeNameKey, "gimulator-config-path")
-	viper.SetDefault(gimulatorConfigVolumePathKey, "/config")
-	viper.SetDefault(gimulatorConfigMapNameKey, "gimulator-config-map")
-	viper.SetDefault(gimulatorResourceRequestsCPUKey, "200m")
-	viper.SetDefault(gimulatorResourceRequestsMemoryKey, "500M")
-	viper.SetDefault(gimulatorResourceRequestsEphemeralKey, "10M")
-	viper.SetDefault(gimulatorResourceLimitsCPUKey, "400m")
-	viper.SetDefault(gimulatorResourceLimitsMemoryKey, "1G")
-	viper.SetDefault(gimulatorResourceLimitsEphemeralKey, "20M")
+	viper.SetDefault(keyLoggerName, "logger")
+	viper.SetDefault(keyLoggerID, 123456789)
+	viper.SetDefault(keyLoggerImage, "logger:v1.0")
+	viper.SetDefault(keyLoggerType, Finisher)
+	viper.SetDefault(keyLoggerCmd, "/app/logger")
+	viper.SetDefault(keyLoggerRole, "logger")
+	viper.SetDefault(keyLoggerLogDirName, "logger-log-dir")
+	viper.SetDefault(keyLoggerLogDirPath, "/tmp")
+	viper.SetDefault(keyLoggerResourceRequestsCPU, "200m")
+	viper.SetDefault(keyLoggerResourceRequestsMemory, "500M")
+	viper.SetDefault(keyLoggerResourceRequestsEphemeral, "10M")
+	viper.SetDefault(keyLoggerResourceLimitsCPU, "400m")
+	viper.SetDefault(keyLoggerResourceLimitsMemory, "1G")
+	viper.SetDefault(keyLoggerResourceLimitsEphemeral, "20M")
 
-	viper.SetDefault(loggerNameKey, "logger")
-	viper.SetDefault(loggerIDKey, 123456789)
-	viper.SetDefault(loggerImageKey, "logger:v1.0")
-	viper.SetDefault(loggerTypeKey, Finisher)
-	viper.SetDefault(loggerCmdKey, "/app/logger")
-	viper.SetDefault(loggerRoleKey, "logger")
-	viper.SetDefault(loggerLogDirNameKey, "logger-log-dir")
-	viper.SetDefault(loggerLogDirPathKey, "/tmp")
-	viper.SetDefault(loggerResourceRequestsCPUKey, "200m")
-	viper.SetDefault(loggerResourceRequestsMemoryKey, "500M")
-	viper.SetDefault(loggerResourceRequestsEphemeralKey, "10M")
-	viper.SetDefault(loggerResourceLimitsCPUKey, "400m")
-	viper.SetDefault(loggerResourceLimitsMemoryKey, "1G")
-	viper.SetDefault(loggerResourceLimitsEphemeralKey, "20M")
+	viper.SetDefault(keySharedVolumeName, "shared-volume")
+	viper.SetDefault(keySharedVolumePath, "/tmp/pod")
 
-	viper.SetDefault(sharedVolumeNameKey, "shared-volume")
-	viper.SetDefault(sharedVolumePathKey, "/tmp/pod")
+	viper.SetDefault(keyNamespace, "default")
 
-	viper.SetDefault(podNamePrefixKey, "room-")
-	viper.SetDefault(namespaceKey, "default")
-	viper.SetDefault(restartPolicyKey, "OnFailure")
+	viper.SetDefault(keyDefaultResourceRequestsCPU, "100m")
+	viper.SetDefault(keyDefaultResourceRequestsMemory, "100M")
+	viper.SetDefault(keyDefaultResourceRequestsEphemeral, "10M")
 
-	viper.SetDefault(resourceRequestsCPUKey, "100m")
-	viper.SetDefault(resourceRequestsMemoryKey, "100M")
-	viper.SetDefault(resourceRequestsEphemeralKey, "10M")
+	viper.SetDefault(keyDefaultResourceLimitsCPU, "200m")
+	viper.SetDefault(keyDefaultResourceLimitsMemory, "200M")
+	viper.SetDefault(keyDefaultResourceLimitsEphemeral, "20M")
 
-	viper.SetDefault(resourceLimitsCPUKey, "200m")
-	viper.SetDefault(resourceLimitsMemoryKey, "200M")
-	viper.SetDefault(resourceLimitsEphemeralKey, "20M")
+	if err := ReadEnvironments(); err != nil {
+		fmt.Println(err)
+	}
 }
 
-func ReadEnvironments() {
+func ReadEnvironments() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
+
 	err := viper.ReadInConfig()
 	if err != nil {
-		//TODO
-		panic(err)
+		return err
 	}
+
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		fmt.Println("Config file changed:", e.Name)
 	})
+
+	return nil
 }
+
+///////////////////////////////// S3
 
 func S3AccessKey() string {
-	return viper.GetString(s3AccessKeyKey)
+	return viper.GetString(keyS3AccessKey)
 }
 func S3SecretKey() string {
-	return viper.GetString(s3SecretKeyKey)
+	return viper.GetString(keyS3SecretKey)
 }
 func S3URL() string {
-	return viper.GetString(s3URLKey)
-}
-func S3Token() string {
-	return viper.GetString(s3TokenKey)
+	return viper.GetString(keyS3URL)
 }
 
+///////////////////////////////// Gimulator
+
 func GimulatorName() string {
-	return viper.GetString(gimulatorNameKey)
+	return viper.GetString(keyGimulatorName)
 }
 func GimulatorID() int {
-	return viper.GetInt(gimulatorIDKey)
+	return viper.GetInt(keyGimulatorID)
 }
 func GimulatorImage() string {
-	return viper.GetString(gimulatorImageKey)
+	return viper.GetString(keyGimulatorImage)
 }
 func GimulatorType() ContainerType {
 	return Master
 }
 func GimulatorCmd() string {
-	return viper.GetString(gimulatorCmdKey)
+	return viper.GetString(keyGimulatorCmd)
 }
 func GimulatorConfigVolumeName() string {
-	return viper.GetString(gimulatorConfigVolumeNameKey)
+	return viper.GetString(keyGimulatorConfigVolumeName)
 }
 func GimulatorConfigVolumePath() string {
-	return viper.GetString(gimulatorConfigVolumePathKey)
+	return viper.GetString(keyGimulatorConfigVolumePath)
 }
 func GimulatorConfigMapName() string {
-	return viper.GetString(gimulatorConfigMapNameKey)
+	return viper.GetString(keyGimulatorConfigMapName)
 }
 func GimulatorResourceRequestsCPU() string {
-	return viper.GetString(gimulatorResourceRequestsCPUKey)
+	return viper.GetString(keyGimulatorResourceRequestsCPU)
 }
 func GimulatorResourceRequestsMemory() string {
-	return viper.GetString(gimulatorResourceRequestsMemoryKey)
+	return viper.GetString(keyGimulatorResourceRequestsMemory)
 }
 func GimulatorResourceRequestsEphemeral() string {
-	return viper.GetString(gimulatorResourceRequestsEphemeralKey)
+	return viper.GetString(keyGimulatorResourceRequestsEphemeral)
 }
 func GimulatorResourceLimitsCPU() string {
-	return viper.GetString(gimulatorResourceLimitsCPUKey)
+	return viper.GetString(keyGimulatorResourceLimitsCPU)
 }
 func GimulatorResourceLimitsMemory() string {
-	return viper.GetString(gimulatorResourceLimitsMemoryKey)
+	return viper.GetString(keyGimulatorResourceLimitsMemory)
 }
 func GimulatorResourceLimitsEphemeral() string {
-	return viper.GetString(gimulatorResourceLimitsEphemeralKey)
+	return viper.GetString(keyGimulatorResourceLimitsEphemeral)
 }
+
+///////////////////////////////// Logger
 
 func LoggerName() string {
-	return viper.GetString(loggerNameKey)
+	return viper.GetString(keyLoggerName)
 }
 func LoggerID() int {
-	return viper.GetInt(loggerIDKey)
+	return viper.GetInt(keyLoggerID)
 }
 func LoggerImage() string {
-	return viper.GetString(loggerImageKey)
+	return viper.GetString(keyLoggerImage)
 }
-func LoggerType() ContainerType {
-	return Finisher
+func LoggerType() string {
+	return viper.GetString(keyLoggerType)
 }
 func LoggerCmd() string {
-	return viper.GetString(loggerCmdKey)
+	return viper.GetString(keyLoggerCmd)
 }
 func LoggerRole() string {
-	return viper.GetString(loggerCmdKey)
+	return viper.GetString(keyLoggerCmd)
 }
 func LoggerLogDirName() string {
-	return viper.GetString(loggerLogDirNameKey)
+	return viper.GetString(keyLoggerLogDirName)
 }
 func LoggerLogDirPath() string {
-	return viper.GetString(loggerLogDirPathKey)
+	return viper.GetString(keyLoggerLogDirPath)
 }
 func LoggerResourceRequestsCPU() string {
-	return viper.GetString(loggerResourceRequestsCPUKey)
+	return viper.GetString(keyLoggerResourceRequestsCPU)
 }
 func LoggerResourceRequestsMemory() string {
-	return viper.GetString(loggerResourceRequestsMemoryKey)
+	return viper.GetString(keyLoggerResourceRequestsMemory)
 }
 func LoggerResourceRequestsEphemeral() string {
-	return viper.GetString(loggerResourceRequestsEphemeralKey)
+	return viper.GetString(keyLoggerResourceRequestsEphemeral)
 }
 func LoggerResourceLimitsCPU() string {
-	return viper.GetString(loggerResourceLimitsCPUKey)
+	return viper.GetString(keyLoggerResourceLimitsCPU)
 }
 func LoggerResourceLimitsMemory() string {
-	return viper.GetString(loggerResourceLimitsMemoryKey)
+	return viper.GetString(keyLoggerResourceLimitsMemory)
 }
 func LoggerResourceLimitsEphemeral() string {
-	return viper.GetString(loggerResourceLimitsEphemeralKey)
+	return viper.GetString(keyLoggerResourceLimitsEphemeral)
 }
 
-// func ResultName() string        { return viper.GetString(resultNameKey) }
-// func ResultImage() string       { return viper.GetString(resultImageKey) }
-// func ResultType() ContainerType { return Finisher }
-// func ResultCmd() string         { return viper.GetString(resultCmdKey) }
-// func ResultRole() string        { return viper.GetString(resultCmdKey) }
+///////////////////////////////// SharedVolume
 
 func SharedVolumeName() string {
-	return viper.GetString(sharedVolumeNameKey)
+	return viper.GetString(keySharedVolumeName)
 }
 func SharedVolumePath() string {
-	return viper.GetString(sharedVolumePathKey)
+	return viper.GetString(keySharedVolumePath)
 }
 
-func PodNamePrefix() string {
-	return viper.GetString(podNamePrefixKey)
-}
+///////////////////////////////// Namespace
+
 func Namespace() string {
-	return viper.GetString(namespaceKey)
+	return viper.GetString(keyNamespace)
 }
-func RestartPolicy() string {
-	return viper.GetString(restartPolicyKey)
-}
+
+///////////////////////////////// DefaultResources
 
 func ResourceRequestsCPU() string {
-	return viper.GetString(resourceRequestsCPUKey)
+	return viper.GetString(keyDefaultResourceRequestsCPU)
 }
 func ResourceRequestsMemory() string {
-	return viper.GetString(resourceRequestsMemoryKey)
+	return viper.GetString(keyDefaultResourceRequestsMemory)
 }
 func ResourceRequestsEphemeral() string {
-	return viper.GetString(resourceRequestsEphemeralKey)
+	return viper.GetString(keyDefaultResourceRequestsEphemeral)
 }
 func ResourceLimitsCPU() string {
-	return viper.GetString(resourceLimitsCPUKey)
+	return viper.GetString(keyDefaultResourceLimitsCPU)
 }
 func ResourceLimitsMemory() string {
-	return viper.GetString(resourceLimitsMemoryKey)
+	return viper.GetString(keyDefaultResourceLimitsMemory)
 }
 func ResourceLimitsEphemeral() string {
-	return viper.GetString(resourceLimitsEphemeralKey)
+	return viper.GetString(keyDefaultResourceLimitsEphemeral)
 }
