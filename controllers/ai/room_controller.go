@@ -26,10 +26,13 @@ import (
 	"github.com/go-logr/logr"
 	uuid "github.com/satori/go.uuid"
 	"gitlab.com/Syfract/Xerac/hub/utils/cache"
+	"gitlab.com/Syfract/Xerac/hub/utils/convertor"
 	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
 	"gitlab.com/Syfract/Xerac/hub/utils/name"
 	"gitlab.com/Syfract/Xerac/hub/utils/storage"
 	"gopkg.in/yaml.v2"
+	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
-	hubaiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
 	"gitlab.com/Syfract/Xerac/hub/utils/deployer"
 )
 
@@ -67,16 +69,79 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
 
-	r.log.Info("Get aiv1.Room")
-	instance := aiv1.Room{}
-	if err := r.Get(ctx, req.NamespacedName, &instance); err != nil {
+	src := &aiv1.Room{}
+	if err := r.Get(ctx, req.NamespacedName, src); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
+	dst := &aiv1.Room{}
+	src.DeepCopyInto(dst)
+
+	if err := r.reconcileActors(src, dst); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileConfigMaps(src, dst); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileSketch(src, dst); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileVolumes(src, dst); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileArgs(src, dst); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, cm := range dst.Spec.ConfigMaps {
+		configMap, err := convertor.ConvertConfigMap(cm)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if err := r.reconcileConfigMap(dst, configMap); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	job, err := convertor.ConvertRoom(dst)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileJob(src, job); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+// ********************************* reconcile jobs *********************************
+
+func (r *RoomReconciler) reconcileJob(src *aiv1.Room, job *batch.Job) error {
+	syncedJob, err := r.deployer.SyncJob(job)
+	if err != nil {
+		return err
+	}
+	fmt.Println(syncedJob.Status.Conditions)
+	return nil
+}
+
+// ********************************* reconcile config map *********************************
+
+func (r *RoomReconciler) reconcileConfigMap(src *aiv1.Room, configMap *core.ConfigMap) error {
+	if err := r.deployer.SyncConfigMap(configMap); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ********************************* reconcile actors *********************************
@@ -89,11 +154,6 @@ func (r *RoomReconciler) reconcileActors(src, dst *aiv1.Room) error {
 	if err := r.reconcileLoggerActor(src, dst); err != nil {
 		return err
 	}
-
-	if err := r.reconcileArgs(src, dst); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -151,6 +211,8 @@ func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
 	})
 	return nil
 }
+
+// ********************************* reconcile args *********************************
 
 func (r *RoomReconciler) reconcileArgs(src, dst *aiv1.Room) error {
 	condition := ""
@@ -335,5 +397,5 @@ func (r *RoomReconciler) reconcileLoggerVolume(src, dst *aiv1.Room) error {
 }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&hubaiv1.Room{}).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&aiv1.Room{}).Complete(r)
 }
