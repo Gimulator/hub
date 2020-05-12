@@ -206,7 +206,18 @@ func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
 				Ephemeral: env.LoggerResourceRequestsEphemeral(),
 			},
 		},
-		EnvVars:      make([]aiv1.EnvVar, 0),
+		EnvVars: []aiv1.EnvVar{
+			{Key: "LOGGER_ADDRESS", Value: env.GimulatorIP()},
+			{Key: "LOGGER_S3_URL", Value: env.S3URL()},
+			{Key: "LOGGER_S3_ACCESS_KEY", Value: env.S3AccessKey()},
+			{Key: "LOGGER_S3_SECRET_KEY", Value: env.S3SecretKey()},
+			{Key: "LOGGER_S3_BUCKET", Value: env.LoggerS3Bucket()},
+			{Key: "LOGGER_S3_KEY", Value: name.S3LoggerKeyName(dst.Spec.ID)},
+			{Key: "LOGGER_RECORD_DIR", Value: env.LoggerRecordDir()},
+			{Key: "LOGGER_RECORD_END_KEY", Value: env.GimulatorEndOfGameKey()},
+			{Key: "LOGGER_RABBIT_URI", Value: env.LoggerRabbitURI()},
+			{Key: "LOGGER_RABBIT_QUEUE", Value: env.LoggerRabbitQueue()},
+		},
 		VolumeMounts: make([]aiv1.VolumeMount, 0),
 	})
 	return nil

@@ -17,3 +17,7 @@ func JobName(id int) string {
 func TerminatedFileName(name string) string {
 	return fmt.Sprintf("%s-terminated", name)
 }
+
+func S3LoggerKeyName(id int) string {
+	return fmt.Sprintf("logger-%d", id)
+}
