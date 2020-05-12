@@ -137,7 +137,7 @@ func GimulatorResourceLimitsEphemeral() string {
 	return viper.GetString(keyGimulatorResourceLimitsEphemeral)
 }
 func GimulatorIP() string {
-	return viper.GetString(keyGimulatorIP)
+	return viper.GetString(keyGimulatorHost)
 }
 func GimulatorEndOfGameKey() string {
 	return viper.GetString(keyGimulatorEndOfGameKey)
