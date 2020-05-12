@@ -22,7 +22,7 @@ func init() {
 	viper.SetDefault(keyGimulatorResourceLimitsCPU, "400m")
 	viper.SetDefault(keyGimulatorResourceLimitsMemory, "1G")
 	viper.SetDefault(keyGimulatorResourceLimitsEphemeral, "20M")
-	viper.SetDefault(keyGimulatorIP, "localhost:3030")
+	viper.SetDefault(keyGimulatorHost, "localhost:3030")
 	viper.SetDefault(keyGimulatorEndOfGameKey, "end-of-game")
 
 	viper.SetDefault(keyLoggerName, "logger")
