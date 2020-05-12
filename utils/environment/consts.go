@@ -21,6 +21,8 @@ const (
 	keyGimulatorResourceLimitsCPU         = "gimulator-resource-limits-cpu"
 	keyGimulatorResourceLimitsMemory      = "gimulator-resource-limits-memory"
 	keyGimulatorResourceLimitsEphemeral   = "gimulator-resource-limits-ephemeral"
+	keyGimulatorHost                      = "gimulator-host"
+	keyGimulatorEndOfGameKey              = "gimulator-end-of-game-key"
 
 	keyLoggerName                      = "logger-name"
 	keyLoggerID                        = "logger-id"
@@ -36,6 +38,10 @@ const (
 	keyLoggerResourceLimitsCPU         = "logger-resource-limits-cpu"
 	keyLoggerResourceLimitsMemory      = "logger-resource-limits-memory"
 	keyLoggerResourceLimitsEphemeral   = "logger-resource-limits-ephemeral"
+	keyLoggerS3Bucket                  = "logger-s3-bucket"
+	keyLoggerRabbitURI                 = "logger-rabbit-uri"
+	keyLoggerRabbitQueue               = "logger-rabbit-queue"
+	keyLoggerRecordDir                 = "logger-record-dir"
 
 	keySharedVolumeName = "shared-volume-name"
 	keySharedVolumePath = "shared-volume-path"
