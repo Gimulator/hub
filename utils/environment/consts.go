@@ -21,7 +21,7 @@ const (
 	keyGimulatorResourceLimitsCPU         = "gimulator-resource-limits-cpu"
 	keyGimulatorResourceLimitsMemory      = "gimulator-resource-limits-memory"
 	keyGimulatorResourceLimitsEphemeral   = "gimulator-resource-limits-ephemeral"
-	keyGimulatorIP                        = "gimulator-ip"
+	keyGimulatorHost                      = "gimulator-host"
 	keyGimulatorEndOfGameKey              = "gimulator-end-of-game-key"
 
 	keyLoggerName                      = "logger-name"
