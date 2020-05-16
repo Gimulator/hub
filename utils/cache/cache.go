@@ -3,9 +3,9 @@ package cache
 import (
 	"fmt"
 
+	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/getlantern/deepcopy"
 	"github.com/patrickmn/go-cache"
-	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
 )
 
 var c *cache.Cache

@@ -3,9 +3,9 @@ package convertor
 import (
 	"fmt"
 
-	aiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
-	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
-	"gitlab.com/Syfract/Xerac/hub/utils/name"
+	aiv1 "github.com/Gimulator/hub/apis/ai/v1"
+	env "github.com/Gimulator/hub/utils/environment"
+	"github.com/Gimulator/hub/utils/name"
 
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"

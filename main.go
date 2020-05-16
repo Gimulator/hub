@@ -26,8 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	hubaiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
-	"gitlab.com/Syfract/Xerac/hub/controllers/ai"
+	hubaiv1 "github.com/Gimulator/hub/apis/ai/v1"
+	"github.com/Gimulator/hub/controllers/ai"
 	// +kubebuilder:scaffold:imports
 )
 

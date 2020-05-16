@@ -1,5 +1,5 @@
 domain: xerac.cloud
-repo: gitlab.com/Syfract/Xerac/hub
+repo: github.com/Gimulator/hub
 resources:
 - group: hub
   kind: Room

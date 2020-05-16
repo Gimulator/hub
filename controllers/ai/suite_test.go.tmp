@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	hubaiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
+	hubaiv1 "github.com/Gimulator/hub/apis/ai/v1"
 	// +kubebuilder:scaffold:imports
 )
 

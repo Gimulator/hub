@@ -1,20 +1,20 @@
-module gitlab.com/Syfract/Xerac/hub
+module github.com/Gimulator/hub
 
 go 1.14
 
 require (
-	github.com/Gimulator/Gimulator v0.0.0-20200428110019-5254c1043085
+	github.com/Gimulator/Gimulator v0.0.0-20200516090624-8effbae5e941
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
-	github.com/go-ini/ini v1.55.0 // indirect
+	github.com/go-ini/ini v1.56.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/onsi/ginkgo v1.11.0
-	github.com/onsi/gomega v1.8.1
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
-	github.com/spf13/viper v1.6.3
-	gopkg.in/yaml.v2 v2.2.8
+	github.com/spf13/viper v1.7.0
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v0.18.2

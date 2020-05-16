@@ -1,8 +1,8 @@
 package storage
 
 import (
+	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/minio/minio-go"
-	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
 	"gopkg.in/yaml.v2"
 )
 

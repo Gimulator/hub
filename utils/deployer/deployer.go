@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
+	env "github.com/Gimulator/hub/utils/environment"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

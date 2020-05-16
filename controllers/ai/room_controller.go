@@ -23,13 +23,13 @@ import (
 	"time"
 
 	"github.com/Gimulator/Gimulator/auth"
+	"github.com/Gimulator/hub/utils/cache"
+	"github.com/Gimulator/hub/utils/convertor"
+	env "github.com/Gimulator/hub/utils/environment"
+	"github.com/Gimulator/hub/utils/name"
+	"github.com/Gimulator/hub/utils/storage"
 	"github.com/go-logr/logr"
 	uuid "github.com/satori/go.uuid"
-	"gitlab.com/Syfract/Xerac/hub/utils/cache"
-	"gitlab.com/Syfract/Xerac/hub/utils/convertor"
-	env "gitlab.com/Syfract/Xerac/hub/utils/environment"
-	"gitlab.com/Syfract/Xerac/hub/utils/name"
-	"gitlab.com/Syfract/Xerac/hub/utils/storage"
 	"gopkg.in/yaml.v2"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
@@ -40,8 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aiv1 "gitlab.com/Syfract/Xerac/hub/apis/ai/v1"
-	"gitlab.com/Syfract/Xerac/hub/utils/deployer"
+	aiv1 "github.com/Gimulator/hub/apis/ai/v1"
+	"github.com/Gimulator/hub/utils/deployer"
 )
 
 // RoomReconciler reconciles a Room object
