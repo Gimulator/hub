@@ -1,0 +1,53 @@
+gimulator-name: gimulator
+gimulator-id: -1
+gimulator-image: gimulator:latest
+gimulator-type: master
+gimulator-command: /app/result
+
+gimulator-config-volume-name: gimulator-config-path
+gimulator-config-volume-path: /config
+
+gimulator-resource-requests-cpu: 200m
+gimulator-resource-requests-memory: 500M
+gimulator-resource-requests-ephemeral: 10M
+
+gimulator-resource-limits-cpu: 400m
+gimulator-resource-limits-memory: 1G
+gimulator-resource-limits-ephemeral: 20M
+
+gimulator-host: localhost:3030
+
+gimulator-end-of-game-key: end-of-game
+
+logger-name: logger
+logger-id: -2
+logger-image: logger:latest
+logger-type: finisher
+logger-command: /app/logger
+logger-role: logger
+
+logger-resource-requests-cpu: 200m
+logger-resource-requests-memory: 500M
+logger-resource-requests-ephemeral: 10M
+
+logger-resource-limits-cpu: 400m
+logger-resource-limits-memory: 1G
+logger-resource-limits-ephemeral: 20M
+
+logger-s3-bucket: logger
+logger-rabbit-uri: foo.com:5672
+logger-rabbit-queue: logger
+logger-record-dir: /tmp
+
+shared-volume-name: shared-volume
+shared-volume-path: /tmp/pod
+
+namespace: default
+
+default-resource-requests-cpu: 100m
+default-resource-requests-memory: 100M
+default-resource-requests-ephemeral: 10M
+
+default-resource-limits-cpu: 200m
+default-resource-limits-memory: 200M
+default-resource-limits-ephemeral: 20M

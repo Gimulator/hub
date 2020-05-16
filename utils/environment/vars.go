@@ -9,13 +9,12 @@ import (
 
 func init() {
 	viper.SetDefault(keyGimulatorName, "gimulator")
-	viper.SetDefault(keyGimulatorID, 123)
-	viper.SetDefault(keyGimulatorImage, "gimulator:v1.0")
+	viper.SetDefault(keyGimulatorID, -1)
+	viper.SetDefault(keyGimulatorImage, "gimulator:latest")
 	viper.SetDefault(keyGimulatorType, Master)
 	viper.SetDefault(keyGimulatorCmd, "/app/result")
 	viper.SetDefault(keyGimulatorConfigVolumeName, "gimulator-config-path")
 	viper.SetDefault(keyGimulatorConfigVolumePath, "/config")
-	viper.SetDefault(keyGimulatorConfigMapName, "gimulator-config-map")
 	viper.SetDefault(keyGimulatorResourceRequestsCPU, "200m")
 	viper.SetDefault(keyGimulatorResourceRequestsMemory, "500M")
 	viper.SetDefault(keyGimulatorResourceRequestsEphemeral, "10M")
@@ -26,13 +25,11 @@ func init() {
 	viper.SetDefault(keyGimulatorEndOfGameKey, "end-of-game")
 
 	viper.SetDefault(keyLoggerName, "logger")
-	viper.SetDefault(keyLoggerID, 123456789)
-	viper.SetDefault(keyLoggerImage, "logger:v1.0")
+	viper.SetDefault(keyLoggerID, -2)
+	viper.SetDefault(keyLoggerImage, "logger:latest")
 	viper.SetDefault(keyLoggerType, Finisher)
 	viper.SetDefault(keyLoggerCmd, "/app/logger")
 	viper.SetDefault(keyLoggerRole, "logger")
-	viper.SetDefault(keyLoggerLogDirName, "logger-log-dir")
-	viper.SetDefault(keyLoggerLogDirPath, "/tmp")
 	viper.SetDefault(keyLoggerResourceRequestsCPU, "200m")
 	viper.SetDefault(keyLoggerResourceRequestsMemory, "500M")
 	viper.SetDefault(keyLoggerResourceRequestsEphemeral, "10M")
@@ -40,7 +37,6 @@ func init() {
 	viper.SetDefault(keyLoggerResourceLimitsMemory, "1G")
 	viper.SetDefault(keyLoggerResourceLimitsEphemeral, "20M")
 	viper.SetDefault(keyLoggerS3Bucket, "logger")
-	viper.SetDefault(keyLoggerRabbitURI, "foo.com")
 	viper.SetDefault(keyLoggerRabbitQueue, "logger")
 	viper.SetDefault(keyLoggerRecordDir, "/tmp")
 
@@ -104,7 +100,17 @@ func GimulatorImage() string {
 	return viper.GetString(keyGimulatorImage)
 }
 func GimulatorType() ContainerType {
-	return Master
+	t := viper.GetString(keyGimulatorType)
+	switch t {
+	case string(Master):
+		return Master
+	case string(Slave):
+		return Slave
+	case string(Finisher):
+		return Finisher
+	default:
+		return Slave
+	}
 }
 func GimulatorCmd() string {
 	return viper.GetString(keyGimulatorCmd)
@@ -114,9 +120,6 @@ func GimulatorConfigVolumeName() string {
 }
 func GimulatorConfigVolumePath() string {
 	return viper.GetString(keyGimulatorConfigVolumePath)
-}
-func GimulatorConfigMapName() string {
-	return viper.GetString(keyGimulatorConfigMapName)
 }
 func GimulatorResourceRequestsCPU() string {
 	return viper.GetString(keyGimulatorResourceRequestsCPU)
@@ -154,20 +157,24 @@ func LoggerID() int {
 func LoggerImage() string {
 	return viper.GetString(keyLoggerImage)
 }
-func LoggerType() string {
-	return viper.GetString(keyLoggerType)
+func LoggerType() ContainerType {
+	t := viper.GetString(keyLoggerType)
+	switch t {
+	case string(Master):
+		return Master
+	case string(Slave):
+		return Slave
+	case string(Finisher):
+		return Finisher
+	default:
+		return Slave
+	}
 }
 func LoggerCmd() string {
 	return viper.GetString(keyLoggerCmd)
 }
 func LoggerRole() string {
-	return viper.GetString(keyLoggerCmd)
-}
-func LoggerLogDirName() string {
-	return viper.GetString(keyLoggerLogDirName)
-}
-func LoggerLogDirPath() string {
-	return viper.GetString(keyLoggerLogDirPath)
+	return viper.GetString(keyLoggerRole)
 }
 func LoggerResourceRequestsCPU() string {
 	return viper.GetString(keyLoggerResourceRequestsCPU)
