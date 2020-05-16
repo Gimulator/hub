@@ -3,9 +3,9 @@ package environment
 import "time"
 
 const (
-	keyS3AccessKey = "s3-access-key"
-	keyS3SecretKey = "s3-secret-key"
-	keyS3URL       = "s3-url"
+	keyS3AccessKey = "S3_ACCESS_KEY"
+	keyS3SecretKey = "S3_SECRET_KEY"
+	keyS3URL       = "S3_URL"
 
 	keyGimulatorName                      = "gimulator-name"
 	keyGimulatorID                        = "gimulator-id"

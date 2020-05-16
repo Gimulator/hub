@@ -8,6 +8,10 @@ import (
 )
 
 func init() {
+	viper.BindEnv(keyS3URL)
+	viper.BindEnv(keyS3AccessKey)
+	viper.BindEnv(keyS3SecretKey)
+
 	viper.SetDefault(keyGimulatorName, "gimulator")
 	viper.SetDefault(keyGimulatorID, -1)
 	viper.SetDefault(keyGimulatorImage, "gimulator:latest")
@@ -61,7 +65,7 @@ func init() {
 func ReadEnvironments() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath("example")
 
 	err := viper.ReadInConfig()
 	if err != nil {
