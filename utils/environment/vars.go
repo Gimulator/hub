@@ -100,7 +100,17 @@ func GimulatorImage() string {
 	return viper.GetString(keyGimulatorImage)
 }
 func GimulatorType() ContainerType {
-	return viper.GetString(keyGimulatorType)
+	t := viper.GetString(keyGimulatorType)
+	switch t {
+	case string(Master):
+		return Master
+	case string(Slave):
+		return Slave
+	case string(Finisher):
+		return Finisher
+	default:
+		return Slave
+	}
 }
 func GimulatorCmd() string {
 	return viper.GetString(keyGimulatorCmd)
@@ -147,8 +157,18 @@ func LoggerID() int {
 func LoggerImage() string {
 	return viper.GetString(keyLoggerImage)
 }
-func LoggerType() string {
-	return viper.GetString(keyLoggerType)
+func LoggerType() ContainerType {
+	t := viper.GetString(keyLoggerType)
+	switch t {
+	case string(Master):
+		return Master
+	case string(Slave):
+		return Slave
+	case string(Finisher):
+		return Finisher
+	default:
+		return Slave
+	}
 }
 func LoggerCmd() string {
 	return viper.GetString(keyLoggerCmd)

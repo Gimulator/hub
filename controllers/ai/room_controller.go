@@ -367,9 +367,9 @@ func (r *RoomReconciler) reconcileVolumes(src, dst *aiv1.Room) error {
 		return err
 	}
 
-	if err := r.reconcileLoggerVolume(src, dst); err != nil {
-		return err
-	}
+	//if err := r.reconcileLoggerVolume(src, dst); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -396,16 +396,16 @@ func (r *RoomReconciler) reconcileGimulatorVolume(src, dst *aiv1.Room) error {
 	return nil
 }
 
-func (r *RoomReconciler) reconcileLoggerVolume(src, dst *aiv1.Room) error {
-	loggerVolume := aiv1.Volume{
-		EmptyDirVolume: &aiv1.EmptyDirVolume{
-			Name: env.LoggerLogDirName(),
-		},
-	}
-	dst.Spec.Volumes = append(dst.Spec.Volumes, loggerVolume)
-
-	return nil
-}
+//func (r *RoomReconciler) reconcileLoggerVolume(src, dst *aiv1.Room) error {
+//	loggerVolume := aiv1.Volume{
+//		EmptyDirVolume: &aiv1.EmptyDirVolume{
+//			Name: env.LoggerLogDirName(),
+//		},
+//	}
+//	dst.Spec.Volumes = append(dst.Spec.Volumes, loggerVolume)
+//
+//	return nil
+//}
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).For(&aiv1.Room{}).Complete(r)
