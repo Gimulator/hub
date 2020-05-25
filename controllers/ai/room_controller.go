@@ -33,12 +33,16 @@ import (
 	"gopkg.in/yaml.v2"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	aiv1 "github.com/Gimulator/hub/apis/ai/v1"
 	"github.com/Gimulator/hub/utils/deployer"
@@ -65,58 +69,74 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=rooms/status,verbs=get;update;patch
 
 func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	log := r.log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log.Info("start to reconcile")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
 
 	src := &aiv1.Room{}
 	if err := r.Get(ctx, req.NamespacedName, src); err != nil {
-		if errors.IsNotFound(err) {
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, err
+		log.Error(err, "unable to fetch Room")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	dst := &aiv1.Room{}
 	src.DeepCopyInto(dst)
 
+	log.Info("start to reconcile actors")
 	if err := r.reconcileActors(src, dst); err != nil {
+		log.Error(err, "failed to reconcile actors")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile room's config maps")
 	if err := r.reconcileConfigMaps(src, dst); err != nil {
+		log.Error(err, "failed to reconcile room's config maps")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile sketch")
 	if err := r.reconcileSketch(src, dst); err != nil {
+		log.Error(err, "failed to reconcile sketch")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile volumes")
 	if err := r.reconcileVolumes(src, dst); err != nil {
+		log.Error(err, "failed to reconcile volumes")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile args")
 	if err := r.reconcileArgs(src, dst); err != nil {
+		log.Error(err, "failed to reconcile args")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile kube's config maps")
 	for _, cm := range dst.Spec.ConfigMaps {
 		configMap, err := convertor.ConvertConfigMap(cm)
 		if err != nil {
+			log.Error(err, "failed to reconcile kube's config maps")
 			return ctrl.Result{}, err
 		}
 
 		if err := r.reconcileConfigMap(dst, configMap); err != nil {
+			log.Error(err, "failed to reconcile kube's config maps")
 			return ctrl.Result{}, err
 		}
 	}
 
+	log.Info("start to reconcile job")
 	job, err := convertor.ConvertRoom(dst)
 	if err != nil {
+		log.Error(err, "failed to reconcile job")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcileJob(src, job); err != nil {
+		log.Error(err, "failed to reconcile job")
 		return ctrl.Result{}, err
 	}
 
@@ -126,6 +146,10 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 // ********************************* reconcile jobs *********************************
 
 func (r *RoomReconciler) reconcileJob(src *aiv1.Room, job *batch.Job) error {
+	if err := r.reconcileOwnerReference(src, job); err != nil {
+		return err
+	}
+
 	syncedJob, err := r.deployer.SyncJob(job)
 	if err != nil {
 		return err
@@ -137,6 +161,10 @@ func (r *RoomReconciler) reconcileJob(src *aiv1.Room, job *batch.Job) error {
 // ********************************* reconcile config map *********************************
 
 func (r *RoomReconciler) reconcileConfigMap(src *aiv1.Room, configMap *core.ConfigMap) error {
+	if err := r.reconcileOwnerReference(src, configMap); err != nil {
+		return err
+	}
+
 	if err := r.deployer.SyncConfigMap(configMap); err != nil {
 		return err
 	}
@@ -396,17 +424,57 @@ func (r *RoomReconciler) reconcileGimulatorVolume(src, dst *aiv1.Room) error {
 	return nil
 }
 
-//func (r *RoomReconciler) reconcileLoggerVolume(src, dst *aiv1.Room) error {
-//	loggerVolume := aiv1.Volume{
-//		EmptyDirVolume: &aiv1.EmptyDirVolume{
-//			Name: env.LoggerLogDirName(),
-//		},
-//	}
-//	dst.Spec.Volumes = append(dst.Spec.Volumes, loggerVolume)
-//
-//	return nil
-//}
+// ********************************* reconcile owner reference *********************************
+
+func (r *RoomReconciler) reconcileOwnerReference(owner *aiv1.Room, instance meta.Object) error {
+	return controllerutil.SetOwnerReference(owner, instance, r.Scheme)
+}
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("room-controller", mgr, controller.Options{Reconciler: r})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &batch.Job{}},
+		&handler.EnqueueRequestForOwner{
+			OwnerType:    &aiv1.Room{},
+			IsController: true,
+		})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &core.ConfigMap{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(func(m handler.MapObject) []reconcile.Request {
+				owners := m.Meta.GetOwnerReferences()
+				if owners == nil || len(owners) == 0 {
+					return []reconcile.Request{}
+				}
+
+				var owner *meta.OwnerReference
+				for _, o := range owners {
+					if o.Kind == "Room" {
+						owner = &o
+						break
+					}
+				}
+
+				if owner == nil {
+					return []reconcile.Request{}
+				}
+
+				r.log.Info(fmt.Sprintf("=======================================%s", owner.Name))
+
+				return nil
+			}),
+		})
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).For(&aiv1.Room{}).Complete(r)
 }

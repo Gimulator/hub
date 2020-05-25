@@ -210,13 +210,18 @@ func ConvertConfigMap(src aiv1.ConfigMap) (*core.ConfigMap, error) {
 
 func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
 	dst := &batch.Job{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      name.JobName(src.Spec.ID),
+			Namespace: env.Namespace(),
+		},
 		Spec: batch.JobSpec{
 			BackoffLimit:          &src.Spec.BackoffLimit,
 			ActiveDeadlineSeconds: &src.Spec.ActiveDeadLineSeconds,
 			Template: core.PodTemplateSpec{
 				Spec: core.PodSpec{
-					Volumes:    make([]core.Volume, 0),
-					Containers: make([]core.Container, 0),
+					Volumes:       make([]core.Volume, 0),
+					Containers:    make([]core.Container, 0),
+					RestartPolicy: "Never",
 				},
 			},
 		},

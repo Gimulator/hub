@@ -65,7 +65,7 @@ func init() {
 func ReadEnvironments() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("example")
+	viper.AddConfigPath("/etc/hub")
 
 	err := viper.ReadInConfig()
 	if err != nil {

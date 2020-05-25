@@ -160,6 +160,11 @@ spec:
           type: object
         status:
           description: RoomStatus defines the observed state of Room
+          properties:
+            room-status-type:
+              type: string
+          required:
+          - room-status-type
           type: object
       type: object
   version: v1
