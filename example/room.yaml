@@ -4,7 +4,7 @@ metadata:
   name: "room-123"
   namespace: "default"
 spec:
-  backoff-limit: 2
+  backoff-limit: 0
   active-dead-line-seconds: 30
   id: 123
   sketch: "gimulator-roles"
@@ -26,7 +26,7 @@ spec:
         ephemeral: "30M"
   - name: "judge-team"
     role: "judge"
-    image: "xerac/paper-soccer-judge:staging"
+    image: "xerac/paper-soccer-judge:staging-1-ga14fb10"
     command: "/app/judge"
     type: "master"
     id: 654321

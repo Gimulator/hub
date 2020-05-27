@@ -3,7 +3,7 @@ module github.com/Gimulator/hub
 go 1.14
 
 require (
-	github.com/Gimulator/Gimulator v0.0.0-20200516090624-8effbae5e941
+	github.com/Gimulator/Gimulator v0.0.0-20200524184852-29df9c0be67e
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-ini/ini v1.56.0 // indirect

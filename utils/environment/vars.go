@@ -3,19 +3,23 @@ package environment
 import (
 	"fmt"
 
+	aiv1 "github.com/Gimulator/hub/apis/ai/v1"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
+var gimulatorContainer aiv1.Actor
+var loggerContainer aiv1.Actor
+
 func init() {
-	viper.BindEnv(keyS3URL)
-	viper.BindEnv(keyS3AccessKey)
-	viper.BindEnv(keyS3SecretKey)
+	viper.BindEnv(s3URL)
+	viper.BindEnv(s3AccessKey)
+	viper.BindEnv(s3SecretKey)
 
 	viper.SetDefault(keyGimulatorName, "gimulator")
 	viper.SetDefault(keyGimulatorID, -1)
 	viper.SetDefault(keyGimulatorImage, "gimulator:latest")
-	viper.SetDefault(keyGimulatorType, Master)
+	viper.SetDefault(keyGimulatorType, ContainerTypeMaster)
 	viper.SetDefault(keyGimulatorCmd, "/app/result")
 	viper.SetDefault(keyGimulatorConfigVolumeName, "gimulator-config-path")
 	viper.SetDefault(keyGimulatorConfigVolumePath, "/config")
@@ -25,13 +29,11 @@ func init() {
 	viper.SetDefault(keyGimulatorResourceLimitsCPU, "400m")
 	viper.SetDefault(keyGimulatorResourceLimitsMemory, "1G")
 	viper.SetDefault(keyGimulatorResourceLimitsEphemeral, "20M")
-	viper.SetDefault(keyGimulatorHost, "localhost:3030")
-	viper.SetDefault(keyGimulatorEndOfGameKey, "end-of-game")
 
 	viper.SetDefault(keyLoggerName, "logger")
 	viper.SetDefault(keyLoggerID, -2)
 	viper.SetDefault(keyLoggerImage, "logger:latest")
-	viper.SetDefault(keyLoggerType, Finisher)
+	viper.SetDefault(keyLoggerType, ContainerTypeFinisher)
 	viper.SetDefault(keyLoggerCmd, "/app/logger")
 	viper.SetDefault(keyLoggerRole, "logger")
 	viper.SetDefault(keyLoggerResourceRequestsCPU, "200m")
@@ -40,9 +42,6 @@ func init() {
 	viper.SetDefault(keyLoggerResourceLimitsCPU, "400m")
 	viper.SetDefault(keyLoggerResourceLimitsMemory, "1G")
 	viper.SetDefault(keyLoggerResourceLimitsEphemeral, "20M")
-	viper.SetDefault(keyLoggerS3Bucket, "logger")
-	viper.SetDefault(keyLoggerRabbitQueue, "logger")
-	viper.SetDefault(keyLoggerRecordDir, "/tmp")
 
 	viper.SetDefault(keySharedVolumeName, "shared-volume")
 	viper.SetDefault(keySharedVolumePath, "/tmp/pod")
@@ -83,13 +82,13 @@ func ReadEnvironments() error {
 ///////////////////////////////// S3
 
 func S3AccessKey() string {
-	return viper.GetString(keyS3AccessKey)
+	return viper.GetString(s3AccessKey)
 }
 func S3SecretKey() string {
-	return viper.GetString(keyS3SecretKey)
+	return viper.GetString(s3SecretKey)
 }
 func S3URL() string {
-	return viper.GetString(keyS3URL)
+	return viper.GetString(s3URL)
 }
 
 ///////////////////////////////// Gimulator
@@ -104,17 +103,7 @@ func GimulatorImage() string {
 	return viper.GetString(keyGimulatorImage)
 }
 func GimulatorType() ContainerType {
-	t := viper.GetString(keyGimulatorType)
-	switch t {
-	case string(Master):
-		return Master
-	case string(Slave):
-		return Slave
-	case string(Finisher):
-		return Finisher
-	default:
-		return Slave
-	}
+	return ContainerType(viper.GetString(keyGimulatorType))
 }
 func GimulatorCmd() string {
 	return viper.GetString(keyGimulatorCmd)
@@ -143,12 +132,6 @@ func GimulatorResourceLimitsMemory() string {
 func GimulatorResourceLimitsEphemeral() string {
 	return viper.GetString(keyGimulatorResourceLimitsEphemeral)
 }
-func GimulatorIP() string {
-	return viper.GetString(keyGimulatorHost)
-}
-func GimulatorEndOfGameKey() string {
-	return viper.GetString(keyGimulatorEndOfGameKey)
-}
 
 ///////////////////////////////// Logger
 
@@ -162,17 +145,7 @@ func LoggerImage() string {
 	return viper.GetString(keyLoggerImage)
 }
 func LoggerType() ContainerType {
-	t := viper.GetString(keyLoggerType)
-	switch t {
-	case string(Master):
-		return Master
-	case string(Slave):
-		return Slave
-	case string(Finisher):
-		return Finisher
-	default:
-		return Slave
-	}
+	return ContainerType(viper.GetString(keyLoggerType))
 }
 func LoggerCmd() string {
 	return viper.GetString(keyLoggerCmd)
@@ -198,18 +171,6 @@ func LoggerResourceLimitsMemory() string {
 func LoggerResourceLimitsEphemeral() string {
 	return viper.GetString(keyLoggerResourceLimitsEphemeral)
 }
-func LoggerS3Bucket() string {
-	return viper.GetString(keyLoggerS3Bucket)
-}
-func LoggerRabbitURI() string {
-	return viper.GetString(keyLoggerRabbitURI)
-}
-func LoggerRabbitQueue() string {
-	return viper.GetString(keyLoggerRabbitQueue)
-}
-func LoggerRecordDir() string {
-	return viper.GetString(keyLoggerRecordDir)
-}
 
 ///////////////////////////////// SharedVolume
 
@@ -228,21 +189,81 @@ func Namespace() string {
 
 ///////////////////////////////// DefaultResources
 
-func ResourceRequestsCPU() string {
+func ResourceDefaultRequestsCPU() string {
 	return viper.GetString(keyDefaultResourceRequestsCPU)
 }
-func ResourceRequestsMemory() string {
+func ResourceDefaultRequestsMemory() string {
 	return viper.GetString(keyDefaultResourceRequestsMemory)
 }
-func ResourceRequestsEphemeral() string {
+func ResourceDefaultRequestsEphemeral() string {
 	return viper.GetString(keyDefaultResourceRequestsEphemeral)
 }
-func ResourceLimitsCPU() string {
+func ResourceDefaultLimitsCPU() string {
 	return viper.GetString(keyDefaultResourceLimitsCPU)
 }
-func ResourceLimitsMemory() string {
+func ResourceDefaultLimitsMemory() string {
 	return viper.GetString(keyDefaultResourceLimitsMemory)
 }
-func ResourceLimitsEphemeral() string {
+func ResourceDefaultLimitsEphemeral() string {
 	return viper.GetString(keyDefaultResourceLimitsEphemeral)
+}
+
+////////////////////////////////// Env Vars
+func EnvVarKeyLoggerS3URL() string {
+	return viper.GetString(envvarkeyLoggerS3URL)
+}
+func EnvVarKeyLoggerS3AccessKey() string {
+	return viper.GetString(envvarkeyLoggerS3AccessKey)
+}
+func EnvVarKeyLoggerS3SecretKey() string {
+	return viper.GetString(envvarkeyLoggerS3SecretKey)
+}
+func EnvVarKeyLoggerS3Bucket() string {
+	return viper.GetString(envvarkeyLoggerS3Bucket)
+}
+func EnvVarKeyLoggerRecorderDir() string {
+	return viper.GetString(envvarkeyLoggerRecorderDir)
+}
+func EnvVarKeyLoggerRabbitURI() string {
+	return viper.GetString(envvarkeyLoggerRabbitURI)
+}
+func EnvVarKeyLoggerRabbitQueue() string {
+	return viper.GetString(envvarkeyLoggerRabbitQueue)
+}
+func EnvVarKeyClientID() string {
+	return viper.GetString(envvarkeyClientID)
+}
+func EnvVarKeyRoomID() string {
+	return viper.GetString(envvarkeyRoomID)
+}
+func EnvVarKeyRoomEndOfGameKey() string {
+	return viper.GetString(envvarkeyRoomEndOfGameKey)
+}
+func EnvVarKeyGimulatorHost() string {
+	return viper.GetString(envvarkeyGimulatorHost)
+}
+func EnvVarKeyGimulatorRoleFilePath() string {
+	return viper.GetString(envvarkeyGimulatorRoleFilePath)
+}
+
+func EnvVarValLoggerS3Bucket() string {
+	return viper.GetString(envvarvalLoggerS3Bucket)
+}
+func EnvVarValLoggerRecorderDir() string {
+	return viper.GetString(envvarvalLoggerRecorderDir)
+}
+func EnvVarValLoggerRabbitURI() string {
+	return viper.GetString(envvarvalLoggerRabbitURI)
+}
+func EnvVarValLoggerRabbitQueue() string {
+	return viper.GetString(envvarvalLoggerRabbitQueue)
+}
+func EnvVarValRoomEndOfGameKey() string {
+	return viper.GetString(envvarvalRoomEndOfGameKey)
+}
+func EnvVarValGimulatorHost() string {
+	return viper.GetString(envvarvalGimulatorHost)
+}
+func EnvVarValGimulatorRoleFilePath() string {
+	return viper.GetString(envvarvalGimulatorRoleFilePath)
 }

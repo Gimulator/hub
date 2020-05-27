@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/Gimulator/Gimulator/auth"
@@ -29,7 +30,6 @@ import (
 	"github.com/Gimulator/hub/utils/name"
 	"github.com/Gimulator/hub/utils/storage"
 	"github.com/go-logr/logr"
-	uuid "github.com/satori/go.uuid"
 	"gopkg.in/yaml.v2"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
@@ -150,7 +150,12 @@ func (r *RoomReconciler) reconcileJob(src *aiv1.Room, job *batch.Job) error {
 		return err
 	}
 
+	fmt.Println("=======================================================")
+	fmt.Println(job.Spec.Template.Spec.Containers[0].Resources)
+	fmt.Println("-------------------------------------------------------")
+
 	syncedJob, err := r.deployer.SyncJob(job)
+	fmt.Println(syncedJob.Spec.Template.Spec.Containers[0].Resources)
 	if err != nil {
 		return err
 	}
@@ -204,7 +209,9 @@ func (r *RoomReconciler) reconcileGimulatorActor(src, dst *aiv1.Room) error {
 				Ephemeral: env.GimulatorResourceRequestsEphemeral(),
 			},
 		},
-		EnvVars: make([]aiv1.EnvVar, 0),
+		EnvVars: []aiv1.EnvVar{
+			{Key: env.EnvVarKeyGimulatorRoleFilePath(), Value: env.EnvVarValGimulatorRoleFilePath()},
+		},
 		VolumeMounts: []aiv1.VolumeMount{
 			{
 				Name: env.GimulatorConfigVolumeName(),
@@ -235,16 +242,13 @@ func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
 			},
 		},
 		EnvVars: []aiv1.EnvVar{
-			{Key: "LOGGER_ADDRESS", Value: env.GimulatorIP()},
-			{Key: "LOGGER_S3_URL", Value: env.S3URL()},
-			{Key: "LOGGER_S3_ACCESS_KEY", Value: env.S3AccessKey()},
-			{Key: "LOGGER_S3_SECRET_KEY", Value: env.S3SecretKey()},
-			{Key: "LOGGER_S3_BUCKET", Value: env.LoggerS3Bucket()},
-			{Key: "LOGGER_S3_KEY", Value: name.S3LoggerKeyName(dst.Spec.ID)},
-			{Key: "LOGGER_RECORD_DIR", Value: env.LoggerRecordDir()},
-			{Key: "LOGGER_RECORD_END_KEY", Value: env.GimulatorEndOfGameKey()},
-			{Key: "LOGGER_RABBIT_URI", Value: env.LoggerRabbitURI()},
-			{Key: "LOGGER_RABBIT_QUEUE", Value: env.LoggerRabbitQueue()},
+			{Key: env.EnvVarKeyLoggerS3URL(), Value: env.S3URL()},
+			{Key: env.EnvVarKeyLoggerS3AccessKey(), Value: env.S3AccessKey()},
+			{Key: env.EnvVarKeyLoggerS3SecretKey(), Value: env.S3SecretKey()},
+			{Key: env.EnvVarKeyLoggerS3Bucket(), Value: env.EnvVarValLoggerS3Bucket()},
+			{Key: env.EnvVarKeyLoggerRecorderDir(), Value: env.EnvVarValLoggerRecorderDir()},
+			{Key: env.EnvVarKeyLoggerRabbitURI(), Value: env.EnvVarValLoggerRabbitURI()},
+			{Key: env.EnvVarKeyLoggerRabbitQueue(), Value: env.EnvVarValLoggerRabbitQueue()},
 		},
 		VolumeMounts: make([]aiv1.VolumeMount, 0),
 	})
@@ -322,23 +326,26 @@ func (r *RoomReconciler) reconcileSketch(src, dst *aiv1.Room) error {
 	for i := range dst.Spec.Actors {
 		actor := &dst.Spec.Actors[i]
 
+		actor.EnvVars = append(actor.EnvVars,
+			aiv1.EnvVar{Key: env.EnvVarKeyGimulatorHost(), Value: env.EnvVarValGimulatorHost()},
+			aiv1.EnvVar{Key: env.EnvVarKeyRoomID(), Value: strconv.Itoa(src.Spec.ID)},
+			aiv1.EnvVar{Key: env.EnvVarKeyRoomEndOfGameKey(), Value: env.EnvVarValRoomEndOfGameKey()},
+		)
+
 		if actor.Name == env.GimulatorName() {
 			continue
 		}
 
 		role := actor.Role
-		username := name.ContainerName(actor.Name, actor.ID)
-		password := uuid.NewV4().String()
+		id := actor.ID
 
 		sketch.Actors = append(sketch.Actors, auth.Actor{
-			Role:     role,
-			Username: username,
-			Password: password,
+			Role: role,
+			ID:   strconv.Itoa(id),
 		})
 
 		actor.EnvVars = append(actor.EnvVars,
-			aiv1.EnvVar{Key: env.UsernameEnvVarKey, Value: username},
-			aiv1.EnvVar{Key: env.PasswordEnvVarKey, Value: password},
+			aiv1.EnvVar{Key: env.EnvVarKeyClientID(), Value: strconv.Itoa(id)},
 		)
 	}
 

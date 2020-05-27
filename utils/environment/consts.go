@@ -3,9 +3,30 @@ package environment
 import "time"
 
 const (
-	keyS3AccessKey = "S3_ACCESS_KEY"
-	keyS3SecretKey = "S3_SECRET_KEY"
-	keyS3URL       = "S3_URL"
+	envvarkeyLoggerS3URL           = "env-var-key_logger-s3-url"
+	envvarkeyLoggerS3AccessKey     = "env-var-key_logger-s3-access-key"
+	envvarkeyLoggerS3SecretKey     = "env-var-key_logger-s3-secret-key"
+	envvarkeyLoggerS3Bucket        = "env-var-key_logger-s3-bucket"
+	envvarkeyLoggerRecorderDir     = "env-var-key_logger-recorder-dir"
+	envvarkeyLoggerRabbitURI       = "env-var-key_logger-rabbit-uri"
+	envvarkeyLoggerRabbitQueue     = "env-var-key_logger-rabbit-queue"
+	envvarkeyClientID              = "env-var-key_client-id"
+	envvarkeyRoomID                = "env-var-key_room-id"
+	envvarkeyRoomEndOfGameKey      = "env-var-key_room-end-of-game"
+	envvarkeyGimulatorHost         = "env-var-key_gimulator-host"
+	envvarkeyGimulatorRoleFilePath = "env-var-key_gimulator-role-file-path"
+
+	envvarvalLoggerS3Bucket        = "env-var-val_logger-s3-bucket"
+	envvarvalLoggerRecorderDir     = "env-var-val_logger-recorder-dir"
+	envvarvalLoggerRabbitURI       = "env-var-val_logger-rabbit-uri"
+	envvarvalLoggerRabbitQueue     = "env-var-val_logger-rabbit-queue"
+	envvarvalRoomEndOfGameKey      = "env-var-val_room-end-of-game"
+	envvarvalGimulatorHost         = "env-var-val_gimulator-host"
+	envvarvalGimulatorRoleFilePath = "env-var-val_gimulator-roles-file-path"
+
+	s3AccessKey = "S3_ACCESS_KEY"
+	s3SecretKey = "S3_SECRET_KEY"
+	s3URL       = "S3_URL"
 
 	keyGimulatorName                      = "gimulator-name"
 	keyGimulatorID                        = "gimulator-id"
@@ -20,8 +41,6 @@ const (
 	keyGimulatorResourceLimitsCPU         = "gimulator-resource-limits-cpu"
 	keyGimulatorResourceLimitsMemory      = "gimulator-resource-limits-memory"
 	keyGimulatorResourceLimitsEphemeral   = "gimulator-resource-limits-ephemeral"
-	keyGimulatorHost                      = "gimulator-host"
-	keyGimulatorEndOfGameKey              = "gimulator-end-of-game-key"
 
 	keyLoggerName                      = "logger-name"
 	keyLoggerID                        = "logger-id"
@@ -35,10 +54,6 @@ const (
 	keyLoggerResourceLimitsCPU         = "logger-resource-limits-cpu"
 	keyLoggerResourceLimitsMemory      = "logger-resource-limits-memory"
 	keyLoggerResourceLimitsEphemeral   = "logger-resource-limits-ephemeral"
-	keyLoggerS3Bucket                  = "logger-s3-bucket"
-	keyLoggerRabbitURI                 = "logger-rabbit-uri"
-	keyLoggerRabbitQueue               = "logger-rabbit-queue"
-	keyLoggerRecordDir                 = "logger-record-dir"
 
 	keySharedVolumeName = "shared-volume-name"
 	keySharedVolumePath = "shared-volume-path"
@@ -56,18 +71,14 @@ const (
 type ContainerType string
 
 const (
-	Finisher ContainerType = "finisher"
-	Master   ContainerType = "master"
-	Slave    ContainerType = "slave"
-
-	UsernameEnvVarKey = "username"
-	PasswordEnvVarKey = "password"
-	RoleEnvVarKey     = "role"
+	ContainerTypeFinisher ContainerType = "finisher"
+	ContainerTypeMaster   ContainerType = "master"
+	ContainerTypeSlave    ContainerType = "slave"
 
 	APICallTimeout = time.Second * 5
 
-	CacheExpirationTime  = time.Hour * 6
-	CacheCleanupInterval = time.Hour * 12
+	CacheExpirationTime  = time.Minute * 6
+	CacheCleanupInterval = time.Minute * 6
 )
 
 const FinisherArgs = `trap "touch %s" EXIT
@@ -85,6 +96,7 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
+tail -f
 exit 0
 `
 
@@ -99,6 +111,7 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
+tail -f
 STATUS=$?
 if [[ %s ]]
 then
