@@ -138,10 +138,13 @@ spec:
                     properties:
                       config-map-name:
                         type: string
+                      config-map-path:
+                        type: string
                       name:
                         type: string
                     required:
                     - config-map-name
+                    - config-map-path
                     - name
                     type: object
                   empty-dir:

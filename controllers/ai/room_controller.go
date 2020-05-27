@@ -150,12 +150,7 @@ func (r *RoomReconciler) reconcileJob(src *aiv1.Room, job *batch.Job) error {
 		return err
 	}
 
-	fmt.Println("=======================================================")
-	fmt.Println(job.Spec.Template.Spec.Containers[0].Resources)
-	fmt.Println("-------------------------------------------------------")
-
 	syncedJob, err := r.deployer.SyncJob(job)
-	fmt.Println(syncedJob.Spec.Template.Spec.Containers[0].Resources)
 	if err != nil {
 		return err
 	}
@@ -422,8 +417,10 @@ func (r *RoomReconciler) reconcileSharedVolumes(src, dst *aiv1.Room) error {
 
 func (r *RoomReconciler) reconcileGimulatorVolume(src, dst *aiv1.Room) error {
 	gimulatorVolume := aiv1.Volume{
-		EmptyDirVolume: &aiv1.EmptyDirVolume{
-			Name: env.GimulatorConfigVolumeName(),
+		ConfigMapVolumes: &aiv1.ConfigMapVolume{
+			Name:          env.GimulatorConfigVolumeName(),
+			ConfigMapName: src.Spec.Sketch,
+			Path:          "config.yaml",
 		},
 	}
 	dst.Spec.Volumes = append(dst.Spec.Volumes, gimulatorVolume)

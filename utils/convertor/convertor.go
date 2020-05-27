@@ -148,7 +148,10 @@ func ConvertConfigMapVolume(src *aiv1.ConfigMapVolume) (core.Volume, error) {
 					Name: src.ConfigMapName,
 				},
 				Items: []core.KeyToPath{
-					{Key: "data"}, //TODO: Fix hardcode
+					{
+						Key:  "data",
+						Path: src.Path,
+					}, //TODO: Fix hardcode
 				},
 			},
 		},

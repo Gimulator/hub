@@ -5,7 +5,7 @@ metadata:
   namespace: "default"
 spec:
   backoff-limit: 0
-  active-dead-line-seconds: 30
+  active-dead-line-seconds: 10000
   id: 123
   sketch: "gimulator-roles"
   actors:

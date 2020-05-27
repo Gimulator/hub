@@ -8,6 +8,7 @@ type Volume struct {
 type ConfigMapVolume struct {
 	Name          string `json:"name"`
 	ConfigMapName string `json:"config-map-name"`
+	Path          string `json:"config-map-path"`
 }
 
 type EmptyDirVolume struct {
