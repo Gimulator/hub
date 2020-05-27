@@ -412,6 +412,14 @@ func (r *RoomReconciler) reconcileSharedVolumes(src, dst *aiv1.Room) error {
 	}
 	dst.Spec.Volumes = append(dst.Spec.Volumes, sharedVolume)
 
+	for i := range dst.Spec.Actors {
+		actor := &dst.Spec.Actors[i]
+		actor.VolumeMounts = append(actor.VolumeMounts, aiv1.VolumeMount{
+			Name: env.SharedVolumeName(),
+			Path: env.SharedVolumePath(),
+		})
+	}
+
 	return nil
 }
 
