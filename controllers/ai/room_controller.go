@@ -224,6 +224,7 @@ func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
 		Image:   env.LoggerImage(),
 		Type:    aiv1.AIActorType(env.LoggerType()),
 		Command: env.LoggerCmd(),
+		Role:    env.LoggerRole(),
 		Resources: aiv1.Resources{
 			Limits: aiv1.Resource{
 				CPU:       env.LoggerResourceLimitsCPU(),
@@ -245,7 +246,12 @@ func (r *RoomReconciler) reconcileLoggerActor(src, dst *aiv1.Room) error {
 			{Key: env.EnvVarKeyLoggerRabbitURI(), Value: env.EnvVarValLoggerRabbitURI()},
 			{Key: env.EnvVarKeyLoggerRabbitQueue(), Value: env.EnvVarValLoggerRabbitQueue()},
 		},
-		VolumeMounts: make([]aiv1.VolumeMount, 0),
+		VolumeMounts: []aiv1.VolumeMount{
+			aiv1.VolumeMount{
+				Name: env.SharedVolumeName(),
+				Path: env.EnvVarValLoggerRecorderDir(),
+			},
+		},
 	})
 	return nil
 }
@@ -266,14 +272,19 @@ func (r *RoomReconciler) reconcileArgs(src, dst *aiv1.Room) error {
 	for i := range dst.Spec.Actors {
 		actor := &dst.Spec.Actors[i]
 
+		if actor.Name == env.GimulatorName() {
+			actor.Args = []string{fmt.Sprintf(env.GimulatorArgs, actor.Command, env.SharedVolumePath(), condition, condition)}
+			continue
+		}
+
 		switch actor.Type {
 		case aiv1.AIActorTypeFinisher:
 			path := filepath.Join(env.SharedVolumePath(), name.TerminatedFileName(actor.Name))
-			actor.Args = []string{fmt.Sprintf(env.FinisherArgs, path, actor.Command)}
+			actor.Args = []string{fmt.Sprintf(env.FinisherArgs, env.SharedVolumePath(), path, actor.Command)}
 		case aiv1.AIActorTypeMaster:
-			actor.Args = []string{fmt.Sprintf(env.MasterArgs, actor.Command, condition, condition)}
+			actor.Args = []string{fmt.Sprintf(env.MasterArgs, env.SharedVolumePath(), actor.Command, condition, condition)}
 		case aiv1.AIActorTypeSlave:
-			actor.Args = []string{fmt.Sprintf(env.SlaveArgs, actor.Command, condition)}
+			actor.Args = []string{fmt.Sprintf(env.SlaveArgs, env.SharedVolumePath(), actor.Command, condition)}
 		default:
 			return fmt.Errorf("invalid actor type")
 		}
@@ -284,7 +295,8 @@ func (r *RoomReconciler) reconcileArgs(src, dst *aiv1.Room) error {
 // ********************************* reconcile config maps *********************************
 
 func (r *RoomReconciler) reconcileConfigMaps(src, dst *aiv1.Room) error {
-	for _, cm := range src.Spec.ConfigMaps {
+	for i := range dst.Spec.ConfigMaps {
+		cm := &dst.Spec.ConfigMaps[i]
 
 		if cm.Data != "" {
 			continue
@@ -300,12 +312,7 @@ func (r *RoomReconciler) reconcileConfigMaps(src, dst *aiv1.Room) error {
 			cache.SetYamlString(name, data)
 		}
 
-		dst.Spec.ConfigMaps = append(dst.Spec.ConfigMaps, aiv1.ConfigMap{
-			Name:   cm.Name,
-			Bucket: cm.Bucket,
-			Key:    cm.Key,
-			Data:   data,
-		})
+		cm.Data = data
 	}
 	return nil
 }
@@ -344,6 +351,18 @@ func (r *RoomReconciler) reconcileSketch(src, dst *aiv1.Room) error {
 		)
 	}
 
+	sketch.Roles = append(sketch.Roles, auth.Role{
+		Role: "logger",
+		Rules: []auth.Rule{
+			{
+				Type:      "",
+				Name:      "",
+				Namespace: "",
+				Methods:   []auth.Method{auth.Watch},
+			},
+		},
+	})
+
 	return r.reconcileFinalSketch(src, dst, sketch)
 }
 
@@ -366,7 +385,9 @@ func (r *RoomReconciler) reconcilePrimitiveSketch(src, dst *aiv1.Room) (*auth.Co
 }
 
 func (r *RoomReconciler) reconcileFinalSketch(src, dst *aiv1.Room, sketch *auth.Config) error {
-	for _, cm := range dst.Spec.ConfigMaps {
+	for i := range dst.Spec.ConfigMaps {
+		cm := &dst.Spec.ConfigMaps[i]
+
 		if cm.Name != dst.Spec.Sketch {
 			continue
 		}

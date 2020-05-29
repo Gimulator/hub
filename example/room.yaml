@@ -6,7 +6,7 @@ metadata:
 spec:
   backoff-limit: 0
   active-dead-line-seconds: 10000
-  id: 123
+  id: 12
   sketch: "gimulator-roles"
   actors:
   - name: "agent-team"
@@ -14,7 +14,22 @@ spec:
     image: "xerac/paper-soccer-random-agent:staging"
     command: "/app/agent"
     type: "slave"
-    id: 654321
+    id: 1
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1G"
+        ephemeral: "30M"
+      limits:
+        cpu: "500m"
+        memory: "1G"
+        ephemeral: "30M"
+  - name: "agent-team2"
+    role: "agent"
+    image: "xerac/paper-soccer-random-agent:staging"
+    command: "/app/agent"
+    type: "slave"
+    id: 3
     resources:
       requests:
         cpu: "500m"
@@ -29,7 +44,7 @@ spec:
     image: "xerac/paper-soccer-judge:staging-1-ga14fb10"
     command: "/app/judge"
     type: "master"
-    id: 654321
+    id: 2
     resources:
       requests:
         cpu: "500m"

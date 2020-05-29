@@ -81,11 +81,24 @@ const (
 	CacheCleanupInterval = time.Minute * 6
 )
 
-const FinisherArgs = `trap "touch %s" EXIT
-%s
-`
+const FinisherArgs = `while ! [[ -f "%s/start" ]]; do
+	echo "cannot start right now"
+	sleep 1
+done
 
-const SlaveArgs = `%s &
+echo ">>>>> starting app"
+
+trap "touch %s" EXIT
+%s`
+
+const SlaveArgs = `while ! [[ -f "%s/start" ]]; do
+	echo "cannot start right now"
+	sleep 1
+done
+
+echo ">>>>> starting app"
+
+%s &
 CHILD_PID=$!
 while kill -0 $CHILD_PID 2> /dev/null; do
     if [[ %s ]]
@@ -96,11 +109,17 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
-tail -f
-exit 0
-`
+exit 0`
 
-const MasterArgs = `%s &
+const MasterArgs = `echo ">>>>> start..."
+while ! [[ -f "%s/start" ]]; do
+	echo "cannot start right now"
+	sleep 1
+done
+
+echo ">>>>> starting app"
+
+%s &
 CHILD_PID=$!
 while kill -0 $CHILD_PID 2> /dev/null; do
     if [[ %s ]]
@@ -111,7 +130,6 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
-tail -f
 STATUS=$?
 if [[ %s ]]
 then
@@ -122,5 +140,31 @@ else
     else
         exit 1
     fi
-fi
-`
+fi`
+
+const GimulatorArgs = `%s &
+CHILD_PID=$!
+
+sleep 3
+touch %s/start
+
+while kill -0 $CHILD_PID 2> /dev/null; do
+    if [[ %s ]]
+    then
+        kill $CHILD_PID
+        break
+    fi
+    sleep 1
+done &
+wait $CHILD_PID
+STATUS=$?
+if [[ %s ]]
+then
+    exit 0
+else
+    if [[ "$STATUS" -eq "0" ]]; then
+        exit 0
+    else
+        exit 1
+    fi
+fi`
