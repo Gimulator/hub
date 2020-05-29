@@ -24,47 +24,52 @@ func NewDeployer(c client.Client) *Deployer {
 }
 
 func (d *Deployer) SyncConfigMap(configMap *core.ConfigMap) error {
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
+	getCtx, getCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer getCancel()
 
 	syncedConfigMap := &core.ConfigMap{}
-	if err := d.Get(ctx, types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, syncedConfigMap); err != nil {
-		if !errors.IsNotFound(err) {
+	err := d.Get(getCtx, types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, syncedConfigMap)
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return err
+	case err != nil:
+		syncedConfigMap = configMap.DeepCopy()
+		createCtx, createCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+		defer createCancel()
+
+		err = d.Create(createCtx, syncedConfigMap)
+		if !errors.IsAlreadyExists(err) {
 			return err
 		}
+		return nil
+	case !reflect.DeepEqual(configMap.Data, syncedConfigMap.Data):
 		syncedConfigMap = configMap.DeepCopy()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-		defer cancel()
-		return d.Create(ctx, syncedConfigMap)
-	}
+		updateCtx, updateCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+		defer updateCancel()
 
-	if !reflect.DeepEqual(configMap.Data, syncedConfigMap.Data) {
-		syncedConfigMap = configMap.DeepCopy()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-		defer cancel()
-		return d.Update(ctx, syncedConfigMap)
+		return d.Update(updateCtx, syncedConfigMap)
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (d *Deployer) SyncJob(job *batch.Job) (*batch.Job, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
+	getCtx, getCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer getCancel()
 
 	syncedJob := &batch.Job{}
-	if err := d.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, syncedJob); err != nil {
-		if !errors.IsNotFound(err) {
-			return syncedJob, err
-		}
+	err := d.Get(getCtx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, syncedJob)
+	if errors.IsNotFound(err) {
 		syncedJob = job.DeepCopy()
+		createCtx, createCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+		defer createCancel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-		defer cancel()
-
-		err = d.Create(ctx, syncedJob)
+		err = d.Create(createCtx, syncedJob)
+		if errors.IsAlreadyExists(err) {
+			return syncedJob, nil
+		}
 		return syncedJob, err
 	}
-	return syncedJob, nil
+	return syncedJob, err
 }
