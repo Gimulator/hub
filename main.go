@@ -66,7 +66,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	roomReconciler, err := ai.NewRoomReconciler(mgr, ctrl.Log.WithName("ai").WithName("room"))
+	roomReconciler, err := ai.NewRoomReconciler(mgr, ctrl.Log.WithName("room"))
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Room")
 		os.Exit(1)

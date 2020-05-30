@@ -22,14 +22,49 @@ type RoomSpec struct {
 type RoomStatusType string
 
 const (
-	RoomStatusTypeRunning RoomStatusType = "room-status-type-running"
-	RoomStatusTypeFailed  RoomStatusType = "room-status-type-failed"
-	RoomStatusTypeSuccess RoomStatusType = "room-status-type-success"
+	RoomStatusTypeUnknown RoomStatusType = "unknown"
+	RoomStatusTypeRunning RoomStatusType = "running"
+	RoomStatusTypeFailed  RoomStatusType = "failed"
+	RoomStatusTypeSuccess RoomStatusType = "success"
 )
+
+type NamespacedName struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
 
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
+	ConfigMapList []NamespacedName `json:"configmap-list"`
+	JobList       []NamespacedName `json:"job-list"`
+
 	RoomStatusType RoomStatusType `json:"room-status-type"`
+}
+
+func (r *RoomStatus) AddJob(new NamespacedName) {
+	if r.JobList == nil {
+		r.JobList = make([]NamespacedName, 0)
+	}
+
+	for _, nn := range r.JobList {
+		if nn.Name == new.Name && nn.Namespace == new.Namespace {
+			return
+		}
+	}
+	r.JobList = append(r.JobList, new)
+}
+
+func (r *RoomStatus) AddConfigMap(new NamespacedName) {
+	if r.ConfigMapList == nil {
+		r.ConfigMapList = make([]NamespacedName, 0)
+	}
+
+	for _, nn := range r.ConfigMapList {
+		if nn.Name == new.Name && nn.Namespace == new.Namespace {
+			return
+		}
+	}
+	r.ConfigMapList = append(r.ConfigMapList, new)
 }
 
 // +kubebuilder:object:root=true
