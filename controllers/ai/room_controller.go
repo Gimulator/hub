@@ -118,6 +118,12 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	log.Info("start to reconcile envvars")
+	if err := r.reconcileEvnVars(instance); err != nil {
+		log.Error(err, "failed to reconcile envvars")
+		return ctrl.Result{}, err
+	}
+
 	log.Info("start to reconcile kube's config maps")
 	for _, cm := range instance.Spec.ConfigMaps {
 		configMap, err := convertor.ConvertConfigMap(cm)
@@ -347,6 +353,23 @@ func (r *RoomReconciler) reconcileLoggerActor(instance *aiv1.Room) error {
 	return nil
 }
 
+// ********************************* reconcile environment variables *********************************
+
+func (r *RoomReconciler) reconcileEvnVars(instance *aiv1.Room) error {
+	for i := range instance.Spec.Actors {
+		actor := &instance.Spec.Actors[i]
+
+		actor.EnvVars = append(actor.EnvVars,
+			aiv1.EnvVar{Key: env.EnvVarKeyGimulatorHost(), Value: env.EnvVarValGimulatorHost()},
+			aiv1.EnvVar{Key: env.EnvVarKeyRoomID(), Value: strconv.Itoa(instance.Spec.ID)},
+			aiv1.EnvVar{Key: env.EnvVarKeyRoomEndOfGameKey(), Value: env.EnvVarValRoomEndOfGameKey()},
+			aiv1.EnvVar{Key: env.EnvVarKeyClientID(), Value: strconv.Itoa(actor.ID)},
+		)
+	}
+
+	return nil
+}
+
 // ********************************* reconcile args *********************************
 
 func (r *RoomReconciler) reconcileArgs(instance *aiv1.Room) error {
@@ -418,13 +441,6 @@ func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 
 	for i := range instance.Spec.Actors {
 		actor := &instance.Spec.Actors[i]
-
-		actor.EnvVars = append(actor.EnvVars,
-			aiv1.EnvVar{Key: env.EnvVarKeyGimulatorHost(), Value: env.EnvVarValGimulatorHost()},
-			aiv1.EnvVar{Key: env.EnvVarKeyRoomID(), Value: strconv.Itoa(instance.Spec.ID)},
-			aiv1.EnvVar{Key: env.EnvVarKeyRoomEndOfGameKey(), Value: env.EnvVarValRoomEndOfGameKey()},
-		)
-
 		if actor.Name == env.GimulatorName() {
 			continue
 		}
@@ -436,10 +452,6 @@ func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 			Role: role,
 			ID:   strconv.Itoa(id),
 		})
-
-		actor.EnvVars = append(actor.EnvVars,
-			aiv1.EnvVar{Key: env.EnvVarKeyClientID(), Value: strconv.Itoa(id)},
-		)
 	}
 
 	sketch.Roles = append(sketch.Roles, auth.Role{
