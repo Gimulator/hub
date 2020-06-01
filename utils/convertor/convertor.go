@@ -57,17 +57,17 @@ func ConvertResources(src aiv1.Resources) (core.ResourceRequirements, error) {
 }
 
 func ConvertResourceRequests(src aiv1.Resource) (core.ResourceList, error) {
-	cpu := resource.MustParse(env.ResourceDefaultRequestsCPU())
+	cpu := resource.MustParse(env.DefaultRequestsCPU())
 	if src.CPU != "" {
 		cpu = resource.MustParse(src.CPU)
 	}
 
-	memory := resource.MustParse(env.ResourceDefaultRequestsMemory())
+	memory := resource.MustParse(env.DefaultRequestsMemory())
 	if src.Memory != "" {
 		memory = resource.MustParse(src.Memory)
 	}
 
-	ephemeral := resource.MustParse(env.ResourceDefaultRequestsEphemeral())
+	ephemeral := resource.MustParse(env.DefaultRequestsEphemeral())
 	if src.Ephemeral != "" {
 		memory = resource.MustParse(src.Ephemeral)
 	}
@@ -80,17 +80,17 @@ func ConvertResourceRequests(src aiv1.Resource) (core.ResourceList, error) {
 }
 
 func ConvertResourceLimits(src aiv1.Resource) (core.ResourceList, error) {
-	cpu := resource.MustParse(env.ResourceDefaultLimitsCPU())
+	cpu := resource.MustParse(env.DefaultLimitsCPU())
 	if src.CPU != "" {
 		cpu = resource.MustParse(src.CPU)
 	}
 
-	memory := resource.MustParse(env.ResourceDefaultLimitsMemory())
+	memory := resource.MustParse(env.DefaultLimitsMemory())
 	if src.Memory != "" {
 		memory = resource.MustParse(src.Memory)
 	}
 
-	ephemeral := resource.MustParse(env.ResourceDefaultLimitsEphemeral())
+	ephemeral := resource.MustParse(env.DefaultLimitsEphemeral())
 	if src.Ephemeral != "" {
 		memory = resource.MustParse(src.Ephemeral)
 	}
@@ -149,9 +149,9 @@ func ConvertConfigMapVolume(src *aiv1.ConfigMapVolume) (core.Volume, error) {
 				},
 				Items: []core.KeyToPath{
 					{
-						Key:  "data",
+						Key:  env.ConfigMapItemKey(),
 						Path: src.Path,
-					}, //TODO: Fix hardcode
+					},
 				},
 			},
 		},
@@ -203,10 +203,10 @@ func ConvertConfigMap(src aiv1.ConfigMap) (*core.ConfigMap, error) {
 	return &core.ConfigMap{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      src.Name,
-			Namespace: env.Namespace(),
+			Namespace: env.RoomNamespace(),
 		},
 		Data: map[string]string{
-			"data": src.Data,
+			env.ConfigMapItemKey(): src.Data,
 		},
 	}, nil
 }
@@ -215,7 +215,7 @@ func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
 	dst := &batch.Job{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      name.JobName(src.Spec.ID),
-			Namespace: env.Namespace(),
+			Namespace: env.RoomNamespace(),
 		},
 		Spec: batch.JobSpec{
 			BackoffLimit:          &src.Spec.BackoffLimit,
@@ -224,7 +224,7 @@ func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
 				Spec: core.PodSpec{
 					Volumes:       make([]core.Volume, 0),
 					Containers:    make([]core.Container, 0),
-					RestartPolicy: "Never",
+					RestartPolicy: "OnFailure",
 				},
 			},
 		},

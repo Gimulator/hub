@@ -1,70 +1,61 @@
 gimulator-name: gimulator
 gimulator-id: -1
-gimulator-image: gimulator:latest
+gimulator-image: xerac/gimulator-docker:staging-11-g29df9c0
 gimulator-type: master
-gimulator-command: /app/result
-
-gimulator-config-volume-name: gimulator-config-path
-gimulator-config-volume-path: /config
-
-gimulator-resource-requests-cpu: 200m
-gimulator-resource-requests-memory: 500M
-gimulator-resource-requests-ephemeral: 10M
-
-gimulator-resource-limits-cpu: 400m
-gimulator-resource-limits-memory: 1G
-gimulator-resource-limits-ephemeral: 20M
+gimulator-command: /app/gimulator
+gimulator-config-volume-name: gimulator-config
+gimulator-config-volume-path: /etc/gimulator
+gimulator-requests-cpu: 200m
+gimulator-requests-memory: 500M
+gimulator-requests-ephemeral: 10M
+gimulator-limits-cpu: 400m
+gimulator-limits-memory: 1G
+gimulator-limits-ephemeral: 20M
+gimulator-host: localhost:3030
+gimulator-roles-file-name: roles.yaml
+gimulator-host-env-key: GIMULATOR_HOST
+gimulator-role-file-path-env-key: GIMULATOR_ROLES_FILE_PATH
 
 logger-name: logger
 logger-id: -2
-logger-image: logger:latest
+logger-image: xerac/logger-docker:staging-9-g076ca59
 logger-type: finisher
-logger-command: /app/logger
+logger-command: /app/logger --no-concluder
 logger-role: logger
-
-logger-resource-requests-cpu: 200m
-logger-resource-requests-memory: 500M
-logger-resource-requests-ephemeral: 10M
-
-logger-resource-limits-cpu: 400m
-logger-resource-limits-memory: 1G
-logger-resource-limits-ephemeral: 20M
-
-logger-s3-bucket: logger
+logger-requests-cpu: 200m
+logger-requests-memory: 500M
+logger-requests-ephemeral: 10M
+logger-limits-cpu: 400m
+logger-limits-memory: 1G
+logger-limits-ephemeral: 20M
+logger-log-volume-name: logger-log
+logger-log-volume-Path: /var/log/logger
+logger-s3-bucket: xerac-logger
+logger-recorder-dir: /var/log/logger
 logger-rabbit-uri: foo.com:5672
 logger-rabbit-queue: logger
-logger-record-dir: /tmp
+logger-s3-url-env-key: LOGGER_S3_URL
+logger-s3-access-key-env-key: LOGGER_S3_ACCESS_KEY
+logger-s3-secret-key-env-key: LOGGER_S3_SECRET_KEY
+logger-s3-bucket-env-key: LOGGER_S3_BUCKET
+logger-recorder-dir-env-key: LOGGER_RECORDER_DIR
+logger-rabbit-uri-env-key: LOGGER_RABBIT_URI
+logger-rabbit-queue-env-key: LOGGER_RABBIT_QUEUE
 
 shared-volume-name: shared-volume
 shared-volume-path: /tmp/pod
 
-namespace: default
+config-map-items-key: data
 
-default-resource-requests-cpu: 100m
-default-resource-requests-memory: 100M
-default-resource-requests-ephemeral: 10M
+room-namespace: default
+room-end-of-game: end-of-game
+room-id-env-key: ROOM_ID
+room-end-of-game-env-key: ROOM_END_OF_GAME_KEY
+client-id-env-key: CLIENT_ID
 
-default-resource-limits-cpu: 200m
-default-resource-limits-memory: 200M
-default-resource-limits-ephemeral: 20M
-
-env-var-key_logger-s3-url: LOGGER_S3_URL
-env-var-key_logger-s3-access-key: LOGGER_S3_ACCESS_KEY
-env-var-key_logger-s3-secret-key: LOGGER_S3_SECRET_KEY
-env-var-key_logger-s3-bucket: LOGGER_S3_BUCKET
-env-var-key_logger-recorder-dir: LOGGER_RECORDER_DIR
-env-var-key_logger-rabbit-uri: LOGGER_RABBIT_URI
-env-var-key_logger-rabbit-queue: LOGGER_RABBIT_QUEUE
-env-var-key_client-id: CLIENT_ID
-env-var-key_room-id: ROOM_ID
-env-var-key_room-end-of-game: ROOM_END_OF_GAME_KEY
-env-var-key_gimulator-host: GIMULATOR_HOST
-env-var-key_gimulator-role-file-path: GIMULATOR_ROLES_FILE_PATH
-
-env-var-val_logger-s3-bucket: xerac-logger
-env-var-val_logger-recorder-dir: /var/log/logger
-env-var-val_logger-rabbit-uri: ""
-env-var-val_logger-rabbit-queue: ""
-env-var-val_room-end-of-game: end-of-game
-env-var-val_gimulator-host: localhost:3030
-env-var-val_gimulator-roles-file-path: /etc/gimulator/config.yaml
+default-requests-cpu: 100m
+default-requests-memory: 100M
+default-requests-ephemeral: 10M
+default-limits-cpu: 200m
+default-limits-memory: 200M
+default-limits-ephemeral: 20M

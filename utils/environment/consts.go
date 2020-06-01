@@ -3,69 +3,71 @@ package environment
 import "time"
 
 const (
-	envvarkeyLoggerS3URL           = "env-var-key_logger-s3-url"
-	envvarkeyLoggerS3AccessKey     = "env-var-key_logger-s3-access-key"
-	envvarkeyLoggerS3SecretKey     = "env-var-key_logger-s3-secret-key"
-	envvarkeyLoggerS3Bucket        = "env-var-key_logger-s3-bucket"
-	envvarkeyLoggerRecorderDir     = "env-var-key_logger-recorder-dir"
-	envvarkeyLoggerRabbitURI       = "env-var-key_logger-rabbit-uri"
-	envvarkeyLoggerRabbitQueue     = "env-var-key_logger-rabbit-queue"
-	envvarkeyClientID              = "env-var-key_client-id"
-	envvarkeyRoomID                = "env-var-key_room-id"
-	envvarkeyRoomEndOfGameKey      = "env-var-key_room-end-of-game"
-	envvarkeyGimulatorHost         = "env-var-key_gimulator-host"
-	envvarkeyGimulatorRoleFilePath = "env-var-key_gimulator-role-file-path"
-
-	envvarvalLoggerS3Bucket        = "env-var-val_logger-s3-bucket"
-	envvarvalLoggerRecorderDir     = "env-var-val_logger-recorder-dir"
-	envvarvalLoggerRabbitURI       = "env-var-val_logger-rabbit-uri"
-	envvarvalLoggerRabbitQueue     = "env-var-val_logger-rabbit-queue"
-	envvarvalRoomEndOfGameKey      = "env-var-val_room-end-of-game"
-	envvarvalGimulatorHost         = "env-var-val_gimulator-host"
-	envvarvalGimulatorRoleFilePath = "env-var-val_gimulator-roles-file-path"
-
 	s3AccessKey = "S3_ACCESS_KEY"
 	s3SecretKey = "S3_SECRET_KEY"
 	s3URL       = "S3_URL"
 
-	keyGimulatorName                      = "gimulator-name"
-	keyGimulatorID                        = "gimulator-id"
-	keyGimulatorImage                     = "gimulator-image"
-	keyGimulatorType                      = "gimulator-type"
-	keyGimulatorCmd                       = "gimulator-command"
-	keyGimulatorConfigVolumeName          = "gimulator-config-volume-name"
-	keyGimulatorConfigVolumePath          = "gimulator-config-volume-path"
-	keyGimulatorResourceRequestsCPU       = "gimulator-resource-requests-cpu"
-	keyGimulatorResourceRequestsMemory    = "gimulator-resource-requests-memory"
-	keyGimulatorResourceRequestsEphemeral = "gimulator-resource-requests-ephemeral"
-	keyGimulatorResourceLimitsCPU         = "gimulator-resource-limits-cpu"
-	keyGimulatorResourceLimitsMemory      = "gimulator-resource-limits-memory"
-	keyGimulatorResourceLimitsEphemeral   = "gimulator-resource-limits-ephemeral"
+	gimulatorName               = "gimulator-name"
+	gimulatorID                 = "gimulator-id"
+	gimulatorImage              = "gimulator-image"
+	gimulatorType               = "gimulator-type"
+	gimulatorCmd                = "gimulator-command"
+	gimulatorConfigVolumeName   = "gimulator-config-volume-name"
+	gimulatorConfigVolumePath   = "gimulator-config-volume-path"
+	gimulatorRequestsCPU        = "gimulator-requests-cpu"
+	gimulatorRequestsMemory     = "gimulator-requests-memory"
+	gimulatorRequestsEphemeral  = "gimulator-requests-ephemeral"
+	gimulatorLimitsCPU          = "gimulator-limits-cpu"
+	gimulatorLimitsMemory       = "gimulator-limits-memory"
+	gimulatorLimitsEphemeral    = "gimulator-limits-ephemeral"
+	gimulatorHost               = "gimulator-host"
+	gimulatorRoleFileName       = "gimulator-roles-file-name"
+	gimulatorHostEnvKey         = "gimulator-host-env-key"
+	gimulatorRoleFilePathEnvKey = "gimulator-role-file-path-env-key"
 
-	keyLoggerName                      = "logger-name"
-	keyLoggerID                        = "logger-id"
-	keyLoggerImage                     = "logger-image"
-	keyLoggerType                      = "logger-type"
-	keyLoggerCmd                       = "logger-command"
-	keyLoggerRole                      = "logger-role"
-	keyLoggerResourceRequestsCPU       = "logger-resource-requests-cpu"
-	keyLoggerResourceRequestsMemory    = "logger-resource-requests-memory"
-	keyLoggerResourceRequestsEphemeral = "logger-resource-requests-ephemeral"
-	keyLoggerResourceLimitsCPU         = "logger-resource-limits-cpu"
-	keyLoggerResourceLimitsMemory      = "logger-resource-limits-memory"
-	keyLoggerResourceLimitsEphemeral   = "logger-resource-limits-ephemeral"
+	loggerName              = "logger-name"
+	loggerID                = "logger-id"
+	loggerImage             = "logger-image"
+	loggerType              = "logger-type"
+	loggerCmd               = "logger-command"
+	loggerRole              = "logger-role"
+	loggerRequestsCPU       = "logger-requests-cpu"
+	loggerRequestsMemory    = "logger-requests-memory"
+	loggerRequestsEphemeral = "logger-requests-ephemeral"
+	loggerLimitsCPU         = "logger-limits-cpu"
+	loggerLimitsMemory      = "logger-limits-memory"
+	loggerLimitsEphemeral   = "logger-limits-ephemeral"
+	loggerLogVolumeName     = "logger-log-volume-name"
+	loggerLogVolumePath     = "logger-log-volume-Path"
+	loggerS3Bucket          = "logger-s3-bucket"
+	loggerRecorderDir       = "logger-recorder-dir"
+	loggerRabbitURI         = "logger-rabbit-uri"
+	loggerRabbitQueue       = "logger-rabbit-queue"
+	loggerS3URLEnvKey       = "logger-s3-url-env-key"
+	loggerS3AccessKeyEnvKey = "logger-s3-access-key-env-key"
+	loggerS3SecretKeyEnvKey = "logger-s3-secret-key-env-key"
+	loggerS3BucketEnvKey    = "logger-s3-bucket-env-key"
+	loggerRecorderDirEnvKey = "logger-recorder-dir-env-key"
+	loggerRabbitURIEnvKey   = "logger-rabbit-uri-env-key"
+	loggerRabbitQueueEnvKey = "logger-rabbit-queue-env-key"
 
-	keySharedVolumeName = "shared-volume-name"
-	keySharedVolumePath = "shared-volume-path"
+	sharedVolumeName = "shared-volume-name"
+	sharedVolumePath = "shared-volume-path"
 
-	keyNamespace = "namespace"
+	roomNamespace          = "room-namespace"
+	roomEndOfGameKey       = "room-end-of-game"
+	roomIDEnvKey           = "room-id-env-key"
+	roomEndOfGameKeyEnvKey = "room-end-of-game-env-key"
+	clientIDEnvKey         = "client-id-env-key"
 
-	keyDefaultResourceRequestsCPU       = "default-resource-requests-cpu"
-	keyDefaultResourceRequestsMemory    = "default-resource-requests-memory"
-	keyDefaultResourceRequestsEphemeral = "default-resource-requests-ephemeral"
-	keyDefaultResourceLimitsCPU         = "default-resource-limits-cpu"
-	keyDefaultResourceLimitsMemory      = "default-resource-limits-memory"
-	keyDefaultResourceLimitsEphemeral   = "default-resource-limits-ephemeral"
+	defaultRequestsCPU       = "default-requests-cpu"
+	defaultRequestsMemory    = "default-requests-memory"
+	defaultRequestsEphemeral = "default-requests-ephemeral"
+	defaultLimitsCPU         = "default-limits-cpu"
+	defaultLimitsMemory      = "default-limits-memory"
+	defaultLimitsEphemeral   = "default-limits-ephemeral"
+
+	configMapItemKey = "config-map-items-key"
 )
 
 type ContainerType string
@@ -81,22 +83,26 @@ const (
 	CacheCleanupInterval = time.Minute * 6
 )
 
-const FinisherArgs = `while ! [[ -f "%s/start" ]]; do
-	echo "cannot start right now"
+const FinisherArgs = `
+while ! [[ -f "%s/start" ]]; do
+	echo ">>>>> waitting for start-file in shared volume"
 	sleep 1
 done
 
-echo ">>>>> starting app"
+echo ">>>>> starting finisher app"
 
 trap "touch %s" EXIT
-%s`
+%s
+
+echo ">>>>> end of finisher app"
+`
 
 const SlaveArgs = `while ! [[ -f "%s/start" ]]; do
-	echo "cannot start right now"
+	echo ">>>>> waitting for start file in shared volume"
 	sleep 1
 done
 
-echo ">>>>> starting app"
+echo ">>>>> starting slave app"
 
 %s &
 CHILD_PID=$!
@@ -109,15 +115,17 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
-exit 0`
+echo ">>>>> end of slave app"
+exit 0
+`
 
 const MasterArgs = `echo ">>>>> start..."
 while ! [[ -f "%s/start" ]]; do
-	echo "cannot start right now"
+	echo ">>>>> waitting for start file in shared volume"
 	sleep 1
 done
 
-echo ">>>>> starting app"
+echo ">>>>> starting master app"
 
 %s &
 CHILD_PID=$!
@@ -130,6 +138,7 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
+echo ">>>>> end of master app"
 STATUS=$?
 if [[ %s ]]
 then
@@ -144,8 +153,10 @@ fi`
 
 const GimulatorArgs = `%s &
 CHILD_PID=$!
-
+echo ">>>>> starting gimulator app"
 sleep 3
+
+echo ">>>>> creating start file"
 touch %s/start
 
 while kill -0 $CHILD_PID 2> /dev/null; do
@@ -157,6 +168,7 @@ while kill -0 $CHILD_PID 2> /dev/null; do
     sleep 1
 done &
 wait $CHILD_PID
+echo ">>>>> end of gimulator app"
 STATUS=$?
 if [[ %s ]]
 then

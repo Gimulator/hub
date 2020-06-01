@@ -291,18 +291,21 @@ func (r *RoomReconciler) reconcileGimulatorActor(instance *aiv1.Room) error {
 		Command: env.GimulatorCmd(),
 		Resources: aiv1.Resources{
 			Limits: aiv1.Resource{
-				CPU:       env.GimulatorResourceLimitsCPU(),
-				Memory:    env.GimulatorResourceLimitsMemory(),
-				Ephemeral: env.GimulatorResourceLimitsEphemeral(),
+				CPU:       env.GimulatorLimitsCPU(),
+				Memory:    env.GimulatorLimitsMemory(),
+				Ephemeral: env.GimulatorLimitsEphemeral(),
 			},
 			Requests: aiv1.Resource{
-				CPU:       env.GimulatorResourceRequestsCPU(),
-				Memory:    env.GimulatorResourceRequestsMemory(),
-				Ephemeral: env.GimulatorResourceRequestsEphemeral(),
+				CPU:       env.GimulatorRequestsCPU(),
+				Memory:    env.GimulatorRequestsMemory(),
+				Ephemeral: env.GimulatorRequestsEphemeral(),
 			},
 		},
 		EnvVars: []aiv1.EnvVar{
-			{Key: env.EnvVarKeyGimulatorRoleFilePath(), Value: env.EnvVarValGimulatorRoleFilePath()},
+			{
+				Key:   env.GimulatorRoleFilePathEnvKey(),
+				Value: filepath.Join(env.GimulatorConfigVolumePath(), env.GimulatorRoleFileName()),
+			},
 		},
 		VolumeMounts: []aiv1.VolumeMount{
 			{
@@ -324,29 +327,29 @@ func (r *RoomReconciler) reconcileLoggerActor(instance *aiv1.Room) error {
 		Role:    env.LoggerRole(),
 		Resources: aiv1.Resources{
 			Limits: aiv1.Resource{
-				CPU:       env.LoggerResourceLimitsCPU(),
-				Memory:    env.LoggerResourceLimitsMemory(),
-				Ephemeral: env.LoggerResourceLimitsEphemeral(),
+				CPU:       env.LoggerLimitsCPU(),
+				Memory:    env.LoggerLimitsMemory(),
+				Ephemeral: env.LoggerLimitsEphemeral(),
 			},
 			Requests: aiv1.Resource{
-				CPU:       env.LoggerResourceRequestsCPU(),
-				Memory:    env.LoggerResourceRequestsMemory(),
-				Ephemeral: env.LoggerResourceRequestsEphemeral(),
+				CPU:       env.LoggerRequestsCPU(),
+				Memory:    env.LoggerRequestsMemory(),
+				Ephemeral: env.LoggerRequestsEphemeral(),
 			},
 		},
 		EnvVars: []aiv1.EnvVar{
-			{Key: env.EnvVarKeyLoggerS3URL(), Value: env.S3URL()},
-			{Key: env.EnvVarKeyLoggerS3AccessKey(), Value: env.S3AccessKey()},
-			{Key: env.EnvVarKeyLoggerS3SecretKey(), Value: env.S3SecretKey()},
-			{Key: env.EnvVarKeyLoggerS3Bucket(), Value: env.EnvVarValLoggerS3Bucket()},
-			{Key: env.EnvVarKeyLoggerRecorderDir(), Value: env.EnvVarValLoggerRecorderDir()},
-			{Key: env.EnvVarKeyLoggerRabbitURI(), Value: env.EnvVarValLoggerRabbitURI()},
-			{Key: env.EnvVarKeyLoggerRabbitQueue(), Value: env.EnvVarValLoggerRabbitQueue()},
+			{Key: env.LoggerS3URLEnvKey(), Value: env.S3URL()},
+			{Key: env.LoggerS3AccessKeyEnvKey(), Value: env.S3AccessKey()},
+			{Key: env.LoggerS3SecretKeyEnvKey(), Value: env.S3SecretKey()},
+			{Key: env.LoggerS3BucketEnvKey(), Value: env.LoggerS3Bucket()},
+			{Key: env.LoggerRecorderDirEnvKey(), Value: env.LoggerRecorderDir()},
+			{Key: env.LoggerRabbitURIEnvKey(), Value: env.LoggerRabbitURI()},
+			{Key: env.LoggerRabbitQueueEnvKey(), Value: env.LoggerRabbitQueue()},
 		},
 		VolumeMounts: []aiv1.VolumeMount{
 			{
-				Name: env.SharedVolumeName(),
-				Path: env.EnvVarValLoggerRecorderDir(),
+				Name: env.LoggerLogVolumeName(),
+				Path: env.LoggerLogVolumePath(),
 			},
 		},
 	})
@@ -360,10 +363,10 @@ func (r *RoomReconciler) reconcileEvnVars(instance *aiv1.Room) error {
 		actor := &instance.Spec.Actors[i]
 
 		actor.EnvVars = append(actor.EnvVars,
-			aiv1.EnvVar{Key: env.EnvVarKeyGimulatorHost(), Value: env.EnvVarValGimulatorHost()},
-			aiv1.EnvVar{Key: env.EnvVarKeyRoomID(), Value: strconv.Itoa(instance.Spec.ID)},
-			aiv1.EnvVar{Key: env.EnvVarKeyRoomEndOfGameKey(), Value: env.EnvVarValRoomEndOfGameKey()},
-			aiv1.EnvVar{Key: env.EnvVarKeyClientID(), Value: strconv.Itoa(actor.ID)},
+			aiv1.EnvVar{Key: env.GimulatorHostEnvKey(), Value: env.GimulatorHost()},
+			aiv1.EnvVar{Key: env.RoomIDEnvKey(), Value: strconv.Itoa(instance.Spec.ID)},
+			aiv1.EnvVar{Key: env.RoomEndOfGameKeyEnvKey(), Value: env.RoomEndOfGameKey()},
+			aiv1.EnvVar{Key: env.ClientIDEnvKey(), Value: strconv.Itoa(actor.ID)},
 		)
 	}
 
@@ -517,13 +520,13 @@ func (r *RoomReconciler) reconcileVolumes(instance *aiv1.Room) error {
 		return err
 	}
 
-	if err := r.reconcileGimulatorVolume(instance); err != nil {
+	if err := r.reconcileGimulatorVolumes(instance); err != nil {
 		return err
 	}
 
-	//if err := r.reconcileLoggerVolume(src, dst); err != nil {
-	//	return err
-	//}
+	if err := r.reconcileLoggerVolumes(instance); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -547,15 +550,25 @@ func (r *RoomReconciler) reconcileSharedVolumes(instance *aiv1.Room) error {
 	return nil
 }
 
-func (r *RoomReconciler) reconcileGimulatorVolume(instance *aiv1.Room) error {
+func (r *RoomReconciler) reconcileGimulatorVolumes(instance *aiv1.Room) error {
 	gimulatorVolume := aiv1.Volume{
 		ConfigMapVolumes: &aiv1.ConfigMapVolume{
 			Name:          env.GimulatorConfigVolumeName(),
 			ConfigMapName: instance.Spec.Sketch,
-			Path:          "config.yaml",
+			Path:          env.GimulatorRoleFileName(),
 		},
 	}
 	instance.Spec.Volumes = append(instance.Spec.Volumes, gimulatorVolume)
+
+	return nil
+}
+
+func (r *RoomReconciler) reconcileLoggerVolumes(instance *aiv1.Room) error {
+	instance.Spec.Volumes = append(instance.Spec.Volumes, aiv1.Volume{
+		EmptyDirVolume: &aiv1.EmptyDirVolume{
+			Name: env.LoggerLogVolumeName(),
+		},
+	})
 
 	return nil
 }
