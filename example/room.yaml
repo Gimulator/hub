@@ -41,7 +41,7 @@ spec:
         ephemeral: "30M"
   - name: "judge-team"
     role: "judge"
-    image: "xerac/paper-soccer-judge:staging-1-ga14fb10"
+    image: "xerac/paper-soccer-judge:staging"
     command: "/app/judge"
     type: "master"
     id: 2

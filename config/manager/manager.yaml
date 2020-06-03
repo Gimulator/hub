@@ -36,4 +36,11 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/hub
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hub-config
       terminationGracePeriodSeconds: 10
