@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: xerac/hub
-  newTag: latest
+  newTag: staging

@@ -67,6 +67,10 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=rooms,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=rooms/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps/status,verbs=get;update;patch
 
 func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithValues("name", req.Name, "namespace", req.Namespace)
