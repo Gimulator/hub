@@ -263,10 +263,10 @@ func (in *RoomStatus) DeepCopyInto(out *RoomStatus) {
 		*out = make([]NamespacedName, len(*in))
 		copy(*out, *in)
 	}
-	if in.JobList != nil {
-		in, out := &in.JobList, &out.JobList
-		*out = make([]NamespacedName, len(*in))
-		copy(*out, *in)
+	if in.Job != nil {
+		in, out := &in.Job, &out.Job
+		*out = new(NamespacedName)
+		**out = **in
 	}
 }
 

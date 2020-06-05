@@ -16,6 +16,9 @@ func init() {
 	viper.BindEnv(s3AccessKey)
 	viper.BindEnv(s3SecretKey)
 
+	viper.BindEnv(rabbitURI)
+	viper.BindEnv(rabbitQueue)
+
 	if err := ReadEnvironments(); err != nil {
 		fmt.Println(err)
 	}
@@ -49,6 +52,15 @@ func S3SecretKey() string {
 }
 func S3URL() string {
 	return viper.GetString(s3URL)
+}
+
+///////////////////////////////// Rabbit
+
+func RabbitURI() string {
+	return viper.GetString(rabbitURI)
+}
+func RabbitQueue() string {
+	return viper.GetString(rabbitQueue)
 }
 
 ///////////////////////////////// Gimulator
@@ -154,12 +166,6 @@ func LoggerS3Bucket() string {
 }
 func LoggerRecorderDir() string {
 	return viper.GetString(loggerRecorderDir)
-}
-func LoggerRabbitURI() string {
-	return viper.GetString(loggerRabbitURI)
-}
-func LoggerRabbitQueue() string {
-	return viper.GetString(loggerRabbitQueue)
 }
 func LoggerS3URLEnvKey() string {
 	return viper.GetString(loggerS3URLEnvKey)

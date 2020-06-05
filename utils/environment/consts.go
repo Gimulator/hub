@@ -7,6 +7,9 @@ const (
 	s3SecretKey = "S3_SECRET_KEY"
 	s3URL       = "S3_URL"
 
+	rabbitURI   = "RABBIT_URI"
+	rabbitQueue = "RABBIT_QUEUE"
+
 	gimulatorName               = "gimulator-name"
 	gimulatorID                 = "gimulator-id"
 	gimulatorImage              = "gimulator-image"
@@ -41,8 +44,6 @@ const (
 	loggerLogVolumePath     = "logger-log-volume-Path"
 	loggerS3Bucket          = "logger-s3-bucket"
 	loggerRecorderDir       = "logger-recorder-dir"
-	loggerRabbitURI         = "logger-rabbit-uri"
-	loggerRabbitQueue       = "logger-rabbit-queue"
 	loggerS3URLEnvKey       = "logger-s3-url-env-key"
 	loggerS3AccessKeyEnvKey = "logger-s3-access-key-env-key"
 	loggerS3SecretKeyEnvKey = "logger-s3-secret-key-env-key"

@@ -2,11 +2,11 @@ apiVersion: hub.xerac.cloud/v1
 kind: Room
 metadata:
   name: "room-123"
-  namespace: "default"
+  namespace: "hub-system"
 spec:
   backoff-limit: 0
   active-dead-line-seconds: 10000
-  id: 12
+  id: 123
   sketch: "gimulator-roles"
   actors:
   - name: "agent-team"

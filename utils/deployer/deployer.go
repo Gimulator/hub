@@ -2,7 +2,6 @@ package deployer
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"time"
 
@@ -11,25 +10,30 @@ import (
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Deployer implements helper methods to sync resources
 type Deployer struct {
 	client.Client
 
+	Scheme         *runtime.Scheme
 	configMapMutex sync.Mutex
 	jobMutex       sync.Mutex
 	roomMutex      sync.Mutex
 }
 
 // NewDeployer creates a new Deployer
-func NewDeployer(c client.Client) *Deployer {
+func NewDeployer(c client.Client, scheme *runtime.Scheme) *Deployer {
 	return &Deployer{
 		Client: c,
 
+		Scheme:         scheme,
 		configMapMutex: sync.Mutex{},
 		jobMutex:       sync.Mutex{},
 		roomMutex:      sync.Mutex{},
@@ -38,97 +42,67 @@ func NewDeployer(c client.Client) *Deployer {
 
 // ********************************************************** sync ConfigMap
 
-func (d *Deployer) SyncConfigMap(configMap *core.ConfigMap) (*core.ConfigMap, error) {
+func (d *Deployer) SyncConfigMap(room *aiv1.Room, configMap *core.ConfigMap) (*core.ConfigMap, error) {
 	d.configMapMutex.Lock()
 	defer d.configMapMutex.Unlock()
 
-	_, err := d.getConfigMap(configMap)
-
-	if errors.IsNotFound(err) {
-		return d.createConfigMap(configMap)
+	syncedConfigMap := &core.ConfigMap{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      configMap.Name,
+			Namespace: configMap.Namespace,
+		},
 	}
-
-	if err == nil {
-		return d.updateConfigMap(configMap)
-	}
-
-	return nil, err
-}
-
-func (d *Deployer) getConfigMap(configMap *core.ConfigMap) (*core.ConfigMap, error) {
-	oldConfigMap := &core.ConfigMap{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
 
-	err := d.Get(ctx, types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, oldConfigMap)
-	return oldConfigMap, err
-}
-
-func (d *Deployer) createConfigMap(configMap *core.ConfigMap) (*core.ConfigMap, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
-
-	err := d.Create(ctx, configMap)
-	return configMap, err
-}
-
-func (d *Deployer) updateConfigMap(configMap *core.ConfigMap) (*core.ConfigMap, error) {
-	syncedConfigMap := configMap.DeepCopy()
-
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var err error
-		syncedConfigMap, err = d.getConfigMap(configMap)
-		if err != nil {
-			return err
-		}
-
-		if reflect.DeepEqual(syncedConfigMap.Data, configMap.Data) {
-			return nil
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-		defer cancel()
-
+	if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, syncedConfigMap, func() error {
 		syncedConfigMap.Data = configMap.Data
-		err = d.Update(ctx, syncedConfigMap)
-		return err
-	})
+		controllerutil.SetOwnerReference(room, syncedConfigMap, d.Scheme)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
 
-	return syncedConfigMap, retryErr
+	return syncedConfigMap, nil
 }
 
 // ********************************************************** sync Job
 
-func (d *Deployer) SyncJob(job *batch.Job) (*batch.Job, error) {
+func (d *Deployer) SyncJob(room *aiv1.Room, job *batch.Job) (*batch.Job, error) {
 	d.jobMutex.Lock()
 	defer d.jobMutex.Unlock()
 
-	oldJob, err := d.getJob(job)
-
-	if errors.IsNotFound(err) {
-		return d.createJob(job)
+	syncedJob, err := d.GetJob(types.NamespacedName{Name: job.Name, Namespace: job.Namespace})
+	if err == nil {
+		return syncedJob, nil
+	}
+	if !errors.IsNotFound(err) {
+		return nil, err
 	}
 
-	return oldJob, err
+	if err := controllerutil.SetOwnerReference(room, job, d.Scheme); err != nil {
+		return nil, err
+	}
+
+	return job, d.CreateJob(job)
 }
 
-func (d *Deployer) getJob(job *batch.Job) (*batch.Job, error) {
-	oldJob := &batch.Job{}
+func (d *Deployer) GetJob(nn types.NamespacedName) (*batch.Job, error) {
+	job := &batch.Job{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
 
-	err := d.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, oldJob)
-	return oldJob, err
-}
-
-func (d *Deployer) createJob(job *batch.Job) (*batch.Job, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
-
-	err := d.Create(ctx, job)
+	err := d.Get(ctx, nn, job)
 	return job, err
+}
+
+func (d *Deployer) CreateJob(job *batch.Job) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	return d.Create(ctx, job)
 }
 
 // ********************************************************** sync Room
@@ -137,58 +111,44 @@ func (d *Deployer) SyncRoom(room *aiv1.Room) (*aiv1.Room, error) {
 	d.roomMutex.Lock()
 	defer d.roomMutex.Unlock()
 
-	_, err := d.getRoom(room)
-
-	if errors.IsNotFound(err) {
-		return d.createRoom(room)
+	syncedRoom := &aiv1.Room{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      room.Name,
+			Namespace: room.Namespace,
+		},
 	}
 
-	if err == nil {
-		return d.updateRoom(room)
-	}
-
-	return nil, err
-}
-
-func (d *Deployer) getRoom(room *aiv1.Room) (*aiv1.Room, error) {
-	oldRoom := &aiv1.Room{}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
-
-	err := d.Get(ctx, types.NamespacedName{Name: room.Name, Namespace: room.Namespace}, oldRoom)
-	return oldRoom, err
-}
-
-func (d *Deployer) createRoom(room *aiv1.Room) (*aiv1.Room, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
-
-	err := d.Create(ctx, room)
-	return room, err
-}
-
-func (d *Deployer) updateRoom(room *aiv1.Room) (*aiv1.Room, error) {
-	syncedRoom := room.DeepCopy()
-
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var err error
-		syncedRoom, err = d.getRoom(room)
-		if err != nil {
-			return err
-		}
-
-		if reflect.DeepEqual(syncedRoom.Status, room.Status) {
-			return nil
-		}
-
+	retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 		defer cancel()
 
-		syncedRoom.Status = room.Status
-		err = d.Update(ctx, syncedRoom)
-		return err
+		if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, syncedRoom, func() error {
+			syncedRoom.Status = *room.Status.DeepCopy()
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
 	})
+	return syncedRoom, nil
+}
 
-	return syncedRoom, retryErr
+func (d *Deployer) GetRoom(nn types.NamespacedName) (*aiv1.Room, error) {
+	room := &aiv1.Room{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	err := d.Get(ctx, nn, room)
+	return room, err
+}
+
+func (d *Deployer) DeleteRoom(room *aiv1.Room) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	if err := d.Delete(ctx, room); !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }

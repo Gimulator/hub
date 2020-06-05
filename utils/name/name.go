@@ -11,13 +11,9 @@ func ContainerName(name string, id int) string {
 }
 
 func JobName(id int) string {
-	return fmt.Sprintf("job-%d", id)
+	return fmt.Sprintf("%d", id)
 }
 
 func TerminatedFileName(name string) string {
 	return fmt.Sprintf("%s-terminated", name)
-}
-
-func S3LoggerKeyName(id int) string {
-	return fmt.Sprintf("logger-%d", id)
 }

@@ -177,17 +177,15 @@ spec:
                 type: object
               type: array
             job-list:
-              items:
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-              type: array
+              properties:
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - name
+              - namespace
+              type: object
             room-status-type:
               type: string
           required:

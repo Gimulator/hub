@@ -36,22 +36,13 @@ type NamespacedName struct {
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
 	ConfigMapList []NamespacedName `json:"configmap-list"`
-	JobList       []NamespacedName `json:"job-list"`
+	Job           *NamespacedName  `json:"job-list"`
 
 	RoomStatusType RoomStatusType `json:"room-status-type"`
 }
 
-func (r *RoomStatus) AddJob(new NamespacedName) {
-	if r.JobList == nil {
-		r.JobList = make([]NamespacedName, 0)
-	}
-
-	for _, nn := range r.JobList {
-		if nn.Name == new.Name && nn.Namespace == new.Namespace {
-			return
-		}
-	}
-	r.JobList = append(r.JobList, new)
+func (r *RoomStatus) SetJob(new *NamespacedName) {
+	r.Job = new
 }
 
 func (r *RoomStatus) AddConfigMap(new NamespacedName) {

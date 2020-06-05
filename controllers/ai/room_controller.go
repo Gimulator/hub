@@ -17,29 +17,27 @@ limitations under the License.
 package ai
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/Gimulator/Gimulator/auth"
 	"github.com/Gimulator/hub/utils/cache"
 	"github.com/Gimulator/hub/utils/convertor"
 	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/Gimulator/hub/utils/name"
+	rabbit "github.com/Gimulator/hub/utils/rabbitMQ"
 	"github.com/Gimulator/hub/utils/storage"
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -50,18 +48,25 @@ import (
 
 // RoomReconciler reconciles a Room object
 type RoomReconciler struct {
-	client.Client
 	log      logr.Logger
 	Scheme   *runtime.Scheme
 	deployer *deployer.Deployer
+	rabbit   *rabbit.Rabbit
 }
 
 func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, error) {
+	rabbit, err := rabbit.NewRabbit()
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := mgr.GetScheme()
+
 	return &RoomReconciler{
-		Client:   mgr.GetClient(),
 		log:      log,
-		Scheme:   mgr.GetScheme(),
-		deployer: deployer.NewDeployer(mgr.GetClient()),
+		Scheme:   scheme,
+		deployer: deployer.NewDeployer(mgr.GetClient(), scheme),
+		rabbit:   rabbit,
 	}, nil
 }
 
@@ -76,15 +81,12 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithValues("name", req.Name, "namespace", req.Namespace)
 	log.Info("start to reconcile")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
-
-	src := &aiv1.Room{}
-	if err := r.Get(ctx, req.NamespacedName, src); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("room does not exist")
-			return ctrl.Result{}, nil
-		}
+	src, err := r.deployer.GetRoom(req.NamespacedName)
+	if errors.IsNotFound(err) {
+		log.Info("room does not exist")
+		return ctrl.Result{}, nil
+	}
+	if err != nil {
 		log.Error(err, "unable to fetch Room")
 		return ctrl.Result{}, err
 	}
@@ -150,8 +152,15 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	log.Info("start to deploy job")
-	if err := r.deployJob(instance, job); err != nil {
+	syncedJob, err := r.deployJob(instance, job)
+	if err != nil {
 		log.Error(err, "failed to deploy job")
+		return ctrl.Result{}, err
+	}
+
+	log.Info("start to update room status")
+	if err := r.updateRoomStatus(instance, syncedJob); err != nil {
+		log.Error(err, "failed to update room status")
 		return ctrl.Result{}, err
 	}
 
@@ -173,18 +182,10 @@ func (r *RoomReconciler) reconcileRoom(instance *aiv1.Room) error {
 
 	switch syncedRoom.Status.RoomStatusType {
 	case aiv1.RoomStatusTypeSuccess:
-		deleteCtx, deleteCancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-		defer deleteCancel()
-
-		err = r.Delete(deleteCtx, instance)
-		if errors.IsNotFound(err) {
-			return nil
-		}
-		return err
+		return r.reconcileSuccessfulRoom(instance)
 	case aiv1.RoomStatusTypeFailed:
-		//TODO: handle failed job
+		return r.reconcileFailedRoom(instance)
 	case aiv1.RoomStatusTypeRunning:
-		// Do nothing
 	case aiv1.RoomStatusTypeUnknown:
 		// TODO: What should I do?
 	}
@@ -192,39 +193,65 @@ func (r *RoomReconciler) reconcileRoom(instance *aiv1.Room) error {
 	return nil
 }
 
-// ********************************* deploy jobs *********************************
+func (r *RoomReconciler) reconcileSuccessfulRoom(instance *aiv1.Room) error {
+	return r.deployer.DeleteRoom(instance)
+}
 
-func (r *RoomReconciler) deployJob(instance *aiv1.Room, job *batch.Job) error {
-	if err := r.reconcileOwnerReference(instance, job); err != nil {
-		return err
+func (r *RoomReconciler) reconcileFailedRoom(instance *aiv1.Room) error {
+	result := struct {
+		RoomID  int    `json:"run_id"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}{
+		RoomID:  instance.Spec.ID,
+		Status:  "FAIL",
+		Message: "could not find error",
 	}
 
-	syncedJob, err := r.deployer.SyncJob(job)
+	if instance.Status.Job != nil {
+		job, err := r.deployer.GetJob(types.NamespacedName{Name: instance.Status.Job.Name, Namespace: instance.Status.Job.Namespace})
+		if err == nil && job.Status.Conditions != nil {
+			bytes, err := json.Marshal(job.Status.Conditions)
+			if err == nil {
+				result.Message = string(bytes)
+			}
+		}
+	}
+
+	bytes, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
 
-	if err := r.handleSyncedJob(instance, syncedJob); err != nil {
+	if err := r.rabbit.Send(bytes); err != nil {
 		return err
 	}
 
-	return nil
+	return r.deployer.DeleteRoom(instance)
 }
 
-func (r *RoomReconciler) handleSyncedJob(instance *aiv1.Room, job *batch.Job) error {
-	instance.Status.AddJob(aiv1.NamespacedName{
+// ********************************* update room status *********************************
+
+func (r *RoomReconciler) updateRoomStatus(instance *aiv1.Room, job *batch.Job) error {
+	instance.Status.SetJob(&aiv1.NamespacedName{
 		Name:      job.Name,
 		Namespace: job.Namespace,
 	})
 
-	if len(instance.Status.JobList) > 1 {
-		instance.Status.RoomStatusType = aiv1.RoomStatusTypeUnknown
-		return fmt.Errorf("could not identify status with more than one job in JobList")
-	}
+	//fmt.Println("---------------------------------------------------------------")
+	//fmt.Println("job name", job.Name)
+	//fmt.Println("job completion time", job.Status.CompletionTime)
+	//fmt.Println("job condition", job.Status.Conditions)
+	//fmt.Println("job active", job.Status.Active)
+	//fmt.Println("job succeeded", job.Status.Succeeded)
+	//fmt.Println("job failed", job.Status.Failed)
+	//fmt.Println("job backofflimit", *job.Spec.BackoffLimit)
+	//fmt.Println("---------------------------------------------------------------")
 
-	if len(instance.Status.JobList) < 1 {
-		instance.Status.RoomStatusType = aiv1.RoomStatusTypeUnknown
-		return fmt.Errorf("could not identify status without any job in JobList")
+	instance.Status.RoomStatusType = aiv1.RoomStatusTypeUnknown
+
+	if instance.Status.Job == nil {
+		return fmt.Errorf("could not identify status nil job in Room.Status")
 	}
 
 	if job.Status.Active > 0 {
@@ -237,38 +264,35 @@ func (r *RoomReconciler) handleSyncedJob(instance *aiv1.Room, job *batch.Job) er
 		return nil
 	}
 
-	if job.Status.Failed == *job.Spec.BackoffLimit {
+	if job.Status.Failed == *job.Spec.BackoffLimit+1 && job.Status.Failed > 0 {
 		instance.Status.RoomStatusType = aiv1.RoomStatusTypeFailed
 		return nil
 	}
-
-	instance.Status.RoomStatusType = aiv1.RoomStatusTypeUnknown
 	return nil
+}
+
+// ********************************* deploy jobs *********************************
+
+func (r *RoomReconciler) deployJob(instance *aiv1.Room, job *batch.Job) (*batch.Job, error) {
+	syncedJob, err := r.deployer.SyncJob(instance, job)
+	if err != nil {
+		return nil, err
+	}
+
+	return syncedJob, nil
 }
 
 // ********************************* deploy config map *********************************
 
 func (r *RoomReconciler) deployConfigMap(instance *aiv1.Room, configMap *core.ConfigMap) error {
-	if err := r.reconcileOwnerReference(instance, configMap); err != nil {
-		return err
-	}
-
-	syncedConfigMap, err := r.deployer.SyncConfigMap(configMap)
+	syncedConfigMap, err := r.deployer.SyncConfigMap(instance, configMap)
 	if err != nil {
 		return err
 	}
 
-	if err := r.handleSyncedConfigMap(instance, syncedConfigMap); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *RoomReconciler) handleSyncedConfigMap(instance *aiv1.Room, configMap *core.ConfigMap) error {
 	instance.Status.AddConfigMap(aiv1.NamespacedName{
-		Name:      configMap.Name,
-		Namespace: configMap.Namespace,
+		Name:      syncedConfigMap.Name,
+		Namespace: syncedConfigMap.Namespace,
 	})
 	return nil
 }
@@ -347,8 +371,8 @@ func (r *RoomReconciler) reconcileLoggerActor(instance *aiv1.Room) error {
 			{Key: env.LoggerS3SecretKeyEnvKey(), Value: env.S3SecretKey()},
 			{Key: env.LoggerS3BucketEnvKey(), Value: env.LoggerS3Bucket()},
 			{Key: env.LoggerRecorderDirEnvKey(), Value: env.LoggerRecorderDir()},
-			{Key: env.LoggerRabbitURIEnvKey(), Value: env.LoggerRabbitURI()},
-			{Key: env.LoggerRabbitQueueEnvKey(), Value: env.LoggerRabbitQueue()},
+			{Key: env.LoggerRabbitURIEnvKey(), Value: env.RabbitURI()},
+			{Key: env.LoggerRabbitQueueEnvKey(), Value: env.RabbitQueue()},
 		},
 		VolumeMounts: []aiv1.VolumeMount{
 			{
@@ -462,7 +486,7 @@ func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 	}
 
 	sketch.Roles = append(sketch.Roles, auth.Role{
-		Role: "logger",
+		Role: env.LoggerRole(),
 		Rules: []auth.Rule{
 			{
 				Type:      "",
@@ -579,12 +603,12 @@ func (r *RoomReconciler) reconcileLoggerVolumes(instance *aiv1.Room) error {
 
 // ********************************* reconcile owner reference *********************************
 
-func (r *RoomReconciler) reconcileOwnerReference(owner *aiv1.Room, instance meta.Object) error {
-	return controllerutil.SetOwnerReference(owner, instance, r.Scheme)
-}
+// func (r *RoomReconciler) reconcileOwnerReference(owner *aiv1.Room, instance meta.Object) error {
+// 	return controllerutil.SetOwnerReference(owner, instance, r.Scheme)
+// }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("room-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("resource", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
