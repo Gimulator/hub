@@ -27,7 +27,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
+        image: xerac/hub:staging
         name: manager
         resources:
           limits:
@@ -36,4 +36,27 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/hub
+        env:
+        - name: S3_URL
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3-url
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3-access-key
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3-secret-key
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hub-config
       terminationGracePeriodSeconds: 10

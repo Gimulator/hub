@@ -57,48 +57,48 @@ func ConvertResources(src aiv1.Resources) (core.ResourceRequirements, error) {
 }
 
 func ConvertResourceRequests(src aiv1.Resource) (core.ResourceList, error) {
-	cpu := resource.Format(env.ResourceRequestsCPU())
+	cpu := resource.MustParse(env.DefaultRequestsCPU())
 	if src.CPU != "" {
-		cpu = resource.Format(src.CPU)
+		cpu = resource.MustParse(src.CPU)
 	}
 
-	memory := resource.Format(env.ResourceRequestsMemory())
+	memory := resource.MustParse(env.DefaultRequestsMemory())
 	if src.Memory != "" {
-		memory = resource.Format(src.Memory)
+		memory = resource.MustParse(src.Memory)
 	}
 
-	ephemeral := resource.Format(env.ResourceRequestsEphemeral())
+	ephemeral := resource.MustParse(env.DefaultRequestsEphemeral())
 	if src.Ephemeral != "" {
-		memory = resource.Format(src.Ephemeral)
+		memory = resource.MustParse(src.Ephemeral)
 	}
 
 	return core.ResourceList{
-		core.ResourceCPU:              resource.Quantity{Format: cpu},
-		core.ResourceMemory:           resource.Quantity{Format: memory},
-		core.ResourceEphemeralStorage: resource.Quantity{Format: ephemeral},
+		core.ResourceCPU:              cpu,
+		core.ResourceMemory:           memory,
+		core.ResourceEphemeralStorage: ephemeral,
 	}, nil
 }
 
 func ConvertResourceLimits(src aiv1.Resource) (core.ResourceList, error) {
-	cpu := resource.Format(env.ResourceLimitsCPU())
+	cpu := resource.MustParse(env.DefaultLimitsCPU())
 	if src.CPU != "" {
-		cpu = resource.Format(src.CPU)
+		cpu = resource.MustParse(src.CPU)
 	}
 
-	memory := resource.Format(env.ResourceLimitsMemory())
+	memory := resource.MustParse(env.DefaultLimitsMemory())
 	if src.Memory != "" {
-		memory = resource.Format(src.Memory)
+		memory = resource.MustParse(src.Memory)
 	}
 
-	ephemeral := resource.Format(env.ResourceLimitsEphemeral())
+	ephemeral := resource.MustParse(env.DefaultLimitsEphemeral())
 	if src.Ephemeral != "" {
-		memory = resource.Format(src.Ephemeral)
+		memory = resource.MustParse(src.Ephemeral)
 	}
 
 	return core.ResourceList{
-		core.ResourceCPU:              resource.Quantity{Format: cpu},
-		core.ResourceMemory:           resource.Quantity{Format: memory},
-		core.ResourceEphemeralStorage: resource.Quantity{Format: ephemeral},
+		core.ResourceCPU:              cpu,
+		core.ResourceMemory:           memory,
+		core.ResourceEphemeralStorage: ephemeral,
 	}, nil
 }
 
@@ -148,7 +148,10 @@ func ConvertConfigMapVolume(src *aiv1.ConfigMapVolume) (core.Volume, error) {
 					Name: src.ConfigMapName,
 				},
 				Items: []core.KeyToPath{
-					{Key: "data"}, //TODO: Fix hardcode
+					{
+						Key:  env.ConfigMapItemKey(),
+						Path: src.Path,
+					},
 				},
 			},
 		},
@@ -188,7 +191,7 @@ func ConvertActor(src aiv1.Actor) (core.Container, error) {
 		Env:          envVars,
 		Resources:    resources,
 		Args:         src.Args,
-		Command:      []string{"/bin/bash", "-c"},
+		Command:      []string{"/bin/sh", "-c"},
 	}, nil
 }
 
@@ -200,23 +203,28 @@ func ConvertConfigMap(src aiv1.ConfigMap) (*core.ConfigMap, error) {
 	return &core.ConfigMap{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      src.Name,
-			Namespace: env.Namespace(),
+			Namespace: env.RoomNamespace(),
 		},
 		Data: map[string]string{
-			"data": src.Data,
+			env.ConfigMapItemKey(): src.Data,
 		},
 	}, nil
 }
 
 func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
 	dst := &batch.Job{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      name.JobName(src.Spec.ID),
+			Namespace: env.RoomNamespace(),
+		},
 		Spec: batch.JobSpec{
 			BackoffLimit:          &src.Spec.BackoffLimit,
 			ActiveDeadlineSeconds: &src.Spec.ActiveDeadLineSeconds,
 			Template: core.PodTemplateSpec{
 				Spec: core.PodSpec{
-					Volumes:    make([]core.Volume, 0),
-					Containers: make([]core.Container, 0),
+					Volumes:       make([]core.Volume, 0),
+					Containers:    make([]core.Container, 0),
+					RestartPolicy: "OnFailure",
 				},
 			},
 		},
