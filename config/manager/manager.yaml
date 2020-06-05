@@ -29,6 +29,7 @@ spec:
         - --enable-leader-election
         image: xerac/hub:staging
         name: manager
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: 100m
@@ -55,6 +56,16 @@ spec:
             secretKeyRef:
               name: s3-credential
               key: s3-secret-key
+        - name: RABBIT_URI
+          valueFrom:
+            secretKeyRef:
+              name: rabbit-credential
+              key: rabbit-uri
+        - name: RABBIT_QUEUE
+          valueFrom:
+            secretKeyRef:
+              name: rabbit-credential
+              key: rabbit-queue
       volumes:
       - name: config-volume
         configMap:
