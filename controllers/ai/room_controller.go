@@ -79,7 +79,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 
 func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithValues("name", req.Name, "namespace", req.Namespace)
-	log.Info("start to reconcile")
+	log.Info("starting to reconcile")
 
 	src, err := r.deployer.GetRoom(req.NamespacedName)
 	if errors.IsNotFound(err) {
@@ -87,86 +87,86 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 	if err != nil {
-		log.Error(err, "unable to fetch Room")
+		log.Error(err, "could not get room")
 		return ctrl.Result{}, err
 	}
 
 	instance := &aiv1.Room{}
 	src.DeepCopyInto(instance)
 
-	log.Info("start to reconcile actors")
+	log.Info("starting to reconcile actors")
 	if err := r.reconcileActors(instance); err != nil {
-		log.Error(err, "failed to reconcile actors")
+		log.Error(err, "could not reconcile actors")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile room's config maps")
+	log.Info("starting to reconcile room's config maps")
 	if err := r.reconcileConfigMaps(instance); err != nil {
-		log.Error(err, "failed to reconcile room's config maps")
+		log.Error(err, "could not reconcile room's config maps")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile sketch")
+	log.Info("starting to reconcile sketch")
 	if err := r.reconcileSketch(instance); err != nil {
-		log.Error(err, "failed to reconcile sketch")
+		log.Error(err, "could not reconcile sketch")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile volumes")
+	log.Info("starting to reconcile volumes")
 	if err := r.reconcileVolumes(instance); err != nil {
-		log.Error(err, "failed to reconcile volumes")
+		log.Error(err, "could not reconcile volumes")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile args")
+	log.Info("starting to reconcile args")
 	if err := r.reconcileArgs(instance); err != nil {
-		log.Error(err, "failed to reconcile args")
+		log.Error(err, "could not reconcile args")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile envvars")
+	log.Info("starting to reconcile envvars")
 	if err := r.reconcileEvnVars(instance); err != nil {
-		log.Error(err, "failed to reconcile envvars")
+		log.Error(err, "could not reconcile envvars")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile kube's config maps")
+	log.Info("starting to reconcile kube's config maps")
 	for _, cm := range instance.Spec.ConfigMaps {
 		configMap, err := convertor.ConvertConfigMap(cm)
 		if err != nil {
-			log.Error(err, "failed to reconcile kube's config maps")
+			log.Error(err, "could not reconcile kube's config maps")
 			return ctrl.Result{}, err
 		}
 
 		if err := r.deployConfigMap(instance, configMap); err != nil {
-			log.Error(err, "failed to reconcile kube's config maps")
+			log.Error(err, "could not reconcile kube's config maps")
 			return ctrl.Result{}, err
 		}
 	}
 
-	log.Info("start to reconcile job")
+	log.Info("starting to reconcile job")
 	job, err := convertor.ConvertRoom(instance)
 	if err != nil {
-		log.Error(err, "failed to reconcile job")
+		log.Error(err, "could not reconcile job")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to deploy job")
+	log.Info("starting to deploy job")
 	syncedJob, err := r.deployJob(instance, job)
 	if err != nil {
-		log.Error(err, "failed to deploy job")
+		log.Error(err, "could not deploy job")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to update room status")
+	log.Info("starting to update room status")
 	if err := r.updateRoomStatus(instance, syncedJob); err != nil {
-		log.Error(err, "failed to update room status")
+		log.Error(err, "could not update room status")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("start to reconcile room")
+	log.Info("starting to reconcile room")
 	if err := r.reconcileRoom(instance); err != nil {
-		log.Error(err, "failed to reconcile room")
+		log.Error(err, "could not reconcile room")
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -450,6 +450,7 @@ func (r *RoomReconciler) reconcileConfigMaps(instance *aiv1.Room) error {
 		name := name.ConfigMapName(cm.Bucket, cm.Name)
 		data, err := cache.GetYamlString(name)
 		if err != nil {
+			r.log.WithValues("name", cm.Name, "error", err).Info("could not get data from cache")
 			data, err = storage.Get(cm.Bucket, cm.Key)
 			if err != nil {
 				return err
@@ -601,24 +602,11 @@ func (r *RoomReconciler) reconcileLoggerVolumes(instance *aiv1.Room) error {
 	return nil
 }
 
-// ********************************* reconcile owner reference *********************************
-
-// func (r *RoomReconciler) reconcileOwnerReference(owner *aiv1.Room, instance meta.Object) error {
-// 	return controllerutil.SetOwnerReference(owner, instance, r.Scheme)
-// }
-
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("resource", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
-
-	// if err = c.Watch(
-	// 	&source.Kind{Type: &aiv1.Room{}},
-	// 	&handler.EnqueueRequestForObject{},
-	// ); err != nil {
-	// 	return err
-	// }
 
 	if err = c.Watch(
 		&source.Kind{Type: &batch.Job{}},
