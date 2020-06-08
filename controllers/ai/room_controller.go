@@ -246,6 +246,9 @@ func (r *RoomReconciler) updateRoomStatus(instance *aiv1.Room, job *batch.Job) e
 	//fmt.Println("job succeeded", job.Status.Succeeded)
 	//fmt.Println("job failed", job.Status.Failed)
 	//fmt.Println("job backofflimit", *job.Spec.BackoffLimit)
+	//defer func() {
+	//	fmt.Println(instance.Status)
+	//}()
 	//fmt.Println("---------------------------------------------------------------")
 
 	instance.Status.RoomStatusType = aiv1.RoomStatusTypeUnknown
@@ -264,10 +267,17 @@ func (r *RoomReconciler) updateRoomStatus(instance *aiv1.Room, job *batch.Job) e
 		return nil
 	}
 
-	if job.Status.Failed == *job.Spec.BackoffLimit+1 && job.Status.Failed > 0 {
-		instance.Status.RoomStatusType = aiv1.RoomStatusTypeFailed
-		return nil
+	if job.Status.Conditions != nil && len(job.Status.Conditions) > 0 {
+		con := job.Status.Conditions[0]
+		if con.Type == batch.JobComplete {
+			instance.Status.RoomStatusType = aiv1.RoomStatusTypeSuccess
+		}
+
+		if con.Type == batch.JobFailed {
+			instance.Status.RoomStatusType = aiv1.RoomStatusTypeFailed
+		}
 	}
+
 	return nil
 }
 
