@@ -192,6 +192,7 @@ func ConvertActor(src aiv1.Actor) (core.Container, error) {
 		Resources:    resources,
 		Args:         src.Args,
 		Command:      []string{"/bin/sh", "-c"},
+		ImagePullPolicy: core.PullIfNotPresent,
 	}, nil
 }
 
