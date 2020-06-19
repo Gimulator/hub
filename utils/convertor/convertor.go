@@ -185,13 +185,13 @@ func ConvertActor(src aiv1.Actor) (core.Container, error) {
 	}
 
 	return core.Container{
-		Name:         name.ContainerName(src.Name, src.ID),
-		Image:        src.Image,
-		VolumeMounts: volumeMounts,
-		Env:          envVars,
-		Resources:    resources,
-		Args:         src.Args,
-		Command:      []string{"/bin/sh", "-c"},
+		Name:            name.ContainerName(src.Name, src.ID),
+		Image:           src.Image,
+		VolumeMounts:    volumeMounts,
+		Env:             envVars,
+		Resources:       resources,
+		Args:            src.Args,
+		Command:         []string{"/bin/sh", "-c"},
 		ImagePullPolicy: core.PullIfNotPresent,
 	}, nil
 }

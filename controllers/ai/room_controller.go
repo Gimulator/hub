@@ -22,7 +22,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Gimulator/Gimulator/auth"
+	"github.com/Gimulator/Gimulator/config"
+	"github.com/Gimulator/Gimulator/object"
 	"github.com/Gimulator/hub/utils/cache"
 	"github.com/Gimulator/hub/utils/convertor"
 	env "github.com/Gimulator/hub/utils/environment"
@@ -490,20 +491,23 @@ func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 		role := actor.Role
 		id := actor.ID
 
-		sketch.Actors = append(sketch.Actors, auth.Actor{
+		sketch.Actors = append(sketch.Actors, config.Actor{
 			Role: role,
 			ID:   strconv.Itoa(id),
 		})
 	}
 
-	sketch.Roles = append(sketch.Roles, auth.Role{
-		Role: env.LoggerRole(),
-		Rules: []auth.Rule{
+	sketch.Roles = append(sketch.Roles, config.Role{
+		Name: env.LoggerRole(),
+		//Role: env.LoggerRole(),
+		Rules: []config.Rule{
 			{
-				Type:      "",
-				Name:      "",
-				Namespace: "",
-				Methods:   []auth.Method{auth.Watch},
+				Key: &object.Key{
+					Type:      "",
+					Name:      "",
+					Namespace: "",
+				},
+				Methods: []object.Method{object.MethodWatch},
 			},
 		},
 	})
@@ -511,8 +515,8 @@ func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 	return r.reconcileFinalSketch(instance, sketch)
 }
 
-func (r *RoomReconciler) reconcilePrimitiveSketch(instance *aiv1.Room) (*auth.Config, error) {
-	sketch := &auth.Config{}
+func (r *RoomReconciler) reconcilePrimitiveSketch(instance *aiv1.Room) (*config.Config, error) {
+	sketch := &config.Config{}
 
 	for _, cm := range instance.Spec.ConfigMaps {
 		if cm.Name != instance.Spec.Sketch {
@@ -529,7 +533,7 @@ func (r *RoomReconciler) reconcilePrimitiveSketch(instance *aiv1.Room) (*auth.Co
 	return nil, fmt.Errorf("can not find sketch config map")
 }
 
-func (r *RoomReconciler) reconcileFinalSketch(instance *aiv1.Room, sketch *auth.Config) error {
+func (r *RoomReconciler) reconcileFinalSketch(instance *aiv1.Room, sketch *config.Config) error {
 	for i := range instance.Spec.ConfigMaps {
 		cm := &instance.Spec.ConfigMaps[i]
 

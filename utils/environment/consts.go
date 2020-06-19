@@ -105,7 +105,7 @@ done
 
 echo ">>>>> starting slave app"
 
-%s &
+%s &> /dev/null
 CHILD_PID=$!
 while kill -0 $CHILD_PID 2> /dev/null; do
     if [[ %s ]]
