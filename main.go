@@ -27,7 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hubaiv1 "github.com/Gimulator/hub/apis/ai/v1"
+	hubmlv1 "github.com/Gimulator/hub/apis/ml/v1"
 	"github.com/Gimulator/hub/controllers/ai"
+	"github.com/Gimulator/hub/controllers/ml"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -40,6 +42,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = hubaiv1.AddToScheme(scheme)
+	_ = hubmlv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -74,6 +77,15 @@ func main() {
 
 	if err := roomReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "room-controller", "Room")
+		os.Exit(1)
+	}
+
+	if err = (&ml.MLReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ML"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ML")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

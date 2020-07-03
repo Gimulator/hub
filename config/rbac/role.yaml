@@ -49,6 +49,26 @@ rules:
 - apiGroups:
   - hub.xerac.cloud
   resources:
+  - mls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hub.xerac.cloud
+  resources:
+  - mls/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hub.xerac.cloud
+  resources:
   - rooms
   verbs:
   - create

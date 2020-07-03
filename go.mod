@@ -9,7 +9,8 @@ require (
 	github.com/go-ini/ini v1.57.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/onsi/ginkgo v1.13.0 // indirect
+	github.com/onsi/ginkgo v1.13.0
+	github.com/onsi/gomega v1.10.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/viper v1.7.0
 	github.com/streadway/amqp v1.0.0
