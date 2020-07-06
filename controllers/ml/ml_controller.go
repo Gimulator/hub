@@ -82,6 +82,14 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	job := &batch.Job{}
 
+	if err := m.reconcileDataPersistentVolumeClaim(src, job); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := m.reconcileEvaluationPersistentVolumeClaim(src, job); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if err := m.jobManifest(src, job); err != nil {
 		return ctrl.Result{}, err
 	}
