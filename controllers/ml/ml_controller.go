@@ -210,14 +210,14 @@ func (m *MLReconciler) initContainerManifest(src *mlv1.ML, job *batch.Job) error
 			Image: src.Spec.Image,
 			Resources: core.ResourceRequirements{
 				Limits: core.ResourceList{
-					core.ResourceCPU:              resource.MustParse(src.Spec.CPURecourceLimit),
-					core.ResourceMemory:           resource.MustParse(src.Spec.MemoryRecourceLimit),
-					core.ResourceEphemeralStorage: resource.MustParse(src.Spec.EphemeralRecourceLimit),
+					core.ResourceCPU:              resource.MustParse(src.Spec.CPUResourceLimit),
+					core.ResourceMemory:           resource.MustParse(src.Spec.MemoryResourceLimit),
+					core.ResourceEphemeralStorage: resource.MustParse(src.Spec.EphemeralResourceLimit),
 				},
 				Requests: core.ResourceList{
-					core.ResourceCPU:              resource.MustParse(src.Spec.CPURecourceRequest),
-					core.ResourceMemory:           resource.MustParse(src.Spec.MemoryRecourceRequest),
-					core.ResourceEphemeralStorage: resource.MustParse(src.Spec.EphemeralRecourceRequest),
+					core.ResourceCPU:              resource.MustParse(src.Spec.CPUResourceRequest),
+					core.ResourceMemory:           resource.MustParse(src.Spec.MemoryResourceRequest),
+					core.ResourceEphemeralStorage: resource.MustParse(src.Spec.EphemeralResourceRequest),
 				},
 			},
 			VolumeMounts: []core.VolumeMount{

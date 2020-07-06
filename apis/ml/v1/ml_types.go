@@ -22,16 +22,16 @@ import (
 
 // MLSpec defines the desired state of ML
 type MLSpec struct {
-	ID                    int    `json:"id"`
-	Image                 string `json:"image"`
-	BackoffLimit          int32  `json:"backoff-limit,omitempty"`
+	ID           int    `json:"id"`
+	Image        string `json:"image"`
+	BackoffLimit int32  `json:"backoff-limit,omitempty"`
 
-	CPURecourceRequest       string `json:"cpu-resource-request"`
-	MemoryRecourceRequest    string `json:"memory-resource-request"`
-	EphemeralRecourceRequest string `json:"ephemeral-resource-request"`
-	CPURecourceLimit         string `json:"cpu-resource-limit"`
-	MemoryRecourceLimit      string `json:"memory-resource-limit"`
-	EphemeralRecourceLimit   string `json:"ephemeral-resource-limit"`
+	CPUResourceRequest       string `json:"cpu-resource-request"`
+	MemoryResourceRequest    string `json:"memory-resource-request"`
+	EphemeralResourceRequest string `json:"ephemeral-resource-request"`
+	CPUResourceLimit         string `json:"cpu-resource-limit"`
+	MemoryResourceLimit      string `json:"memory-resource-limit"`
+	EphemeralResourceLimit   string `json:"ephemeral-resource-limit"`
 }
 
 // MLStatus defines the observed state of ML
