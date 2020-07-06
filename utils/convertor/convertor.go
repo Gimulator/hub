@@ -215,7 +215,7 @@ func ConvertConfigMap(src aiv1.ConfigMap) (*core.ConfigMap, error) {
 func ConvertRoom(src *aiv1.Room) (*batch.Job, error) {
 	dst := &batch.Job{
 		ObjectMeta: meta.ObjectMeta{
-			Name:      name.JobName(src.Spec.ID),
+			Name:      name.RoomJobName(src.Spec.ID),
 			Namespace: env.RoomNamespace(),
 		},
 		Spec: batch.JobSpec{

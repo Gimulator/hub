@@ -80,12 +80,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&ml.MLReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ML"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ML")
+	mlReconciler, err := ml.NewMLReconciler(mgr, ctrl.Log.WithName("ml"))
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "ml-controller", "ML")
+		os.Exit(1)
+	}
+
+	if err := mlReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "ml-controller", "ML")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

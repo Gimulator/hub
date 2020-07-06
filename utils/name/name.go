@@ -10,7 +10,11 @@ func ContainerName(name string, id int) string {
 	return fmt.Sprintf("%s-%d", name, id)
 }
 
-func JobName(id int) string {
+func RoomJobName(id int) string {
+	return fmt.Sprintf("%d", id)
+}
+
+func MLJobName(id int) string {
 	return fmt.Sprintf("%d", id)
 }
 

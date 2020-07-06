@@ -20,16 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // MLSpec defines the desired state of ML
 type MLSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	ID                    int    `json:"id"`
+	Image                 string `json:"image"`
+	BackoffLimit          int32  `json:"backoff-limit,omitempty"`
 
-	// Foo is an example field of ML. Edit ML_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	CPURecourceRequest       string `json:"cpu-resource-request"`
+	MemoryRecourceRequest    string `json:"memory-resource-request"`
+	EphemeralRecourceRequest string `json:"ephemeral-resource-request"`
+	CPURecourceLimit         string `json:"cpu-resource-limit"`
+	MemoryRecourceLimit      string `json:"memory-resource-limit"`
+	EphemeralRecourceLimit   string `json:"ephemeral-resource-limit"`
 }
 
 // MLStatus defines the observed state of ML

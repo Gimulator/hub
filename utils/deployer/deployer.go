@@ -6,6 +6,7 @@ import (
 	"time"
 
 	aiv1 "github.com/Gimulator/hub/apis/ai/v1"
+	mlv1 "github.com/Gimulator/hub/apis/ml/v1"
 	env "github.com/Gimulator/hub/utils/environment"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
@@ -26,6 +27,8 @@ type Deployer struct {
 	configMapMutex sync.Mutex
 	jobMutex       sync.Mutex
 	roomMutex      sync.Mutex
+	mlMutex        sync.Mutex
+	pvcMutex       sync.Mutex
 }
 
 // NewDeployer creates a new Deployer
@@ -37,6 +40,8 @@ func NewDeployer(c client.Client, scheme *runtime.Scheme) *Deployer {
 		configMapMutex: sync.Mutex{},
 		jobMutex:       sync.Mutex{},
 		roomMutex:      sync.Mutex{},
+		mlMutex:        sync.Mutex{},
+		pvcMutex:       sync.Mutex{},
 	}
 }
 
@@ -69,7 +74,7 @@ func (d *Deployer) SyncConfigMap(room *aiv1.Room, configMap *core.ConfigMap) (*c
 
 // ********************************************************** sync Job
 
-func (d *Deployer) SyncJob(room *aiv1.Room, job *batch.Job) (*batch.Job, error) {
+func (d *Deployer) SyncJob(owner meta.Object, job *batch.Job) (*batch.Job, error) {
 	d.jobMutex.Lock()
 	defer d.jobMutex.Unlock()
 
@@ -81,7 +86,7 @@ func (d *Deployer) SyncJob(room *aiv1.Room, job *batch.Job) (*batch.Job, error) 
 		return nil, err
 	}
 
-	if err := controllerutil.SetOwnerReference(room, job, d.Scheme); err != nil {
+	if err := controllerutil.SetOwnerReference(owner, job, d.Scheme); err != nil {
 		return nil, err
 	}
 
@@ -151,4 +156,91 @@ func (d *Deployer) DeleteRoom(room *aiv1.Room) error {
 		return err
 	}
 	return nil
+}
+
+// ********************************************************** sync ML
+
+func (d *Deployer) SyncML(ml *mlv1.ML) (*mlv1.ML, error) {
+	d.mlMutex.Lock()
+	defer d.mlMutex.Unlock()
+
+	syncedML := &mlv1.ML{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      ml.Name,
+			Namespace: ml.Namespace,
+		},
+	}
+
+	retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+		defer cancel()
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, syncedML, func() error {
+			syncedML.Status = *ml.Status.DeepCopy()
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	return syncedML, nil
+}
+
+func (d *Deployer) GetML(nn types.NamespacedName) (*mlv1.ML, error) {
+	ml := &mlv1.ML{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	err := d.Get(ctx, nn, ml)
+	return ml, err
+}
+
+func (d *Deployer) DeleteML(ml *mlv1.ML) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	if err := d.Delete(ctx, ml); !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// ********************************************************** sync pvc
+
+func (d *Deployer) SyncPVC(ml *mlv1.ML, pvc *core.PersistentVolumeClaim) (*core.PersistentVolumeClaim, error) {
+	d.pvcMutex.Lock()
+	defer d.pvcMutex.Unlock()
+
+	syncedPVC, err := d.GetPVC(types.NamespacedName{Name: pvc.Name, Namespace: pvc.Namespace})
+	if err == nil {
+		return syncedPVC, nil
+	}
+
+	if !errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := controllerutil.SetOwnerReference(ml, pvc, d.Scheme); err != nil {
+		return nil, err
+	}
+
+	return pvc, d.CreatePVC(pvc)
+}
+
+func (d *Deployer) GetPVC(nn types.NamespacedName) (*core.PersistentVolumeClaim, error) {
+	pvc := &core.PersistentVolumeClaim{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	err := d.Get(ctx, nn, pvc)
+	return pvc, err
+}
+
+func (d *Deployer) CreatePVC(pvc *core.PersistentVolumeClaim) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	return d.Create(ctx, pvc)
 }
