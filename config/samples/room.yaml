@@ -6,11 +6,11 @@ spec:
   backoff-limit: 2                        # omitempty # Read the manifest of kubernetes's jobs
   active-dead-line-seconds: 30            # omitempty # Read the manifest of kubernetes's jobs
   id: 123456                              #           # Postgres ID of the 'run' model
-  sketch: "gimulator-roles"               #           # It points to one configmap in spec.config-map which containes information about 'roles.yaml' file
+  sketch: "gimulator-roles"               #           # It points to one configmap in spec.config-map which contains information about 'roles.yaml' file
   actors:                                            
   - name: "agent-team"                    #           # Name of the team or person
     role: "agent"                         #           # Role of this components in the room, It's important for filling the 'roles.yaml' file
-    image: "registery/agent:v1.0"         #           # URL of docker registery
+    image: "registry/agent:v1.0"         #           # URL of docker registry
     command: "/bin/agent"                 #           # Docker command to run this container
     type: "slave"                         #           # Should fill with [slave, master, finisher], 
     id: 654321                            #           # ID of database for submission
@@ -29,12 +29,12 @@ spec:
       read-only: false                    # omitempty # Default false
     - name: "agent-config"
       path: "/path/to/mount"
-    env-vars:                             # omitempty # Environmet variable this actor needs
+    env-vars:                             # omitempty # Environment variable this actor needs
     - key: "key"                          #           # Name of the env-var
       value: "value"                      #           # Value of the env-var
   - name: "judge-team"
     role: "judge"
-    image: "registery/judge:v1.0"
+    image: "registry/judge:v1.0"
     command: "/bin/judge"
     type: "master"
     id: 654321
@@ -44,7 +44,7 @@ spec:
   - config-map:                           #           # ConfigMap is also a directory, but it fills up with one config-map file in spec.config-maps
       name: "agent-config"                #           # This name connects this volume to actor's volumes
       config-map-name: "agent-configmap"  #           # This name points to one config-map in spec.config-maps
-  config-maps:                            # omitempty # This section containes every config file which should be mounted to containers. You can set s3's credential or directly data
+  config-maps:                            # omitempty # This section contains every config file which should be mounted to containers. You can set s3's credential or directly data
   - name: "agent-configmap"               #           # This name is used in spec.sketch or spec.volumes.config-map
     bucket: "/foo/bar"                    # omitempty # Bucket name of the config-map in S3
     key: "baz.yaml"                       # omitempty # Object(key) name of the config-map in S3
