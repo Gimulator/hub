@@ -474,7 +474,7 @@ func (r *RoomReconciler) reconcileConfigMaps(instance *aiv1.Room) error {
 	return nil
 }
 
-// ********************************* reconcile sektch *********************************
+// ********************************* reconcile sketch *********************************
 
 func (r *RoomReconciler) reconcileSketch(instance *aiv1.Room) error {
 	sketch, err := r.reconcilePrimitiveSketch(instance)

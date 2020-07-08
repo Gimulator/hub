@@ -98,7 +98,7 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	if err := m.evalContainerManifest(src, job); err != nil {
+	if err := m.evaluatorContainerManifest(src, job); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -245,7 +245,7 @@ func (m *MLReconciler) initContainerManifest(src *mlv1.ML, job *batch.Job) error
 	return nil
 }
 
-func (m *MLReconciler) evalContainerManifest(src *mlv1.ML, job *batch.Job) error {
+func (m *MLReconciler) evaluatorContainerManifest(src *mlv1.ML, job *batch.Job) error {
 	job.Spec.Template.Spec.Containers = []core.Container{
 		{
 			Name:  "evaluator",
