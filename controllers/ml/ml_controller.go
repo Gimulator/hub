@@ -214,8 +214,8 @@ func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
 func (m *MLReconciler) initContainerManifest(src *mlv1.ML, job *batch.Job) error {
 	job.Spec.Template.Spec.InitContainers = []core.Container{
 		{
-			Name:  "main-container",
-			Image: src.Spec.Image,
+			Name:  "submission",
+			Image: src.Spec.SubmissionImage,
 			Resources: core.ResourceRequirements{
 				Limits: core.ResourceList{
 					core.ResourceCPU:              resource.MustParse(src.Spec.CPUResourceLimit),
@@ -248,8 +248,8 @@ func (m *MLReconciler) initContainerManifest(src *mlv1.ML, job *batch.Job) error
 func (m *MLReconciler) evalContainerManifest(src *mlv1.ML, job *batch.Job) error {
 	job.Spec.Template.Spec.Containers = []core.Container{
 		{
-			Name:  "eval-container",
-			Image: src.Spec.Image,
+			Name:  "evaluator",
+			Image: src.Spec.EvaluatorImage,
 			Resources: core.ResourceRequirements{
 				Limits: core.ResourceList{
 					core.ResourceCPU:              resource.MustParse("100m"),

@@ -22,9 +22,10 @@ import (
 
 // MLSpec defines the desired state of ML
 type MLSpec struct {
-	ID           int    `json:"id"`
-	Image        string `json:"image"`
-	BackoffLimit int32  `json:"backoff-limit,omitempty"`
+	ID              int    `json:"id"`
+	EvaluatorImage  string `json:"evaluator-image"`
+	SubmissionImage string `json:"submission-image"`
+	BackoffLimit    int32  `json:"backoff-limit,omitempty"`
 
 	CPUResourceRequest       string `json:"cpu-resource-request"`
 	MemoryResourceRequest    string `json:"memory-resource-request"`
