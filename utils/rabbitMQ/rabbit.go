@@ -13,7 +13,7 @@ type Rabbit struct {
 func NewRabbit() (*Rabbit, error) {
 	r := &Rabbit{}
 
-	conn, err := amqp.Dial(env.RabbitURI())
+	conn, err := amqp.Dial(env.RabbitURL())
 	if err != nil {
 		return nil, err
 	}

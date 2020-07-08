@@ -7,7 +7,7 @@ const (
 	s3SecretKey = "S3_SECRET_KEY"
 	s3URL       = "S3_URL"
 
-	rabbitURI   = "RABBIT_URI"
+	rabbitURL   = "RABBIT_URL"
 	rabbitQueue = "RABBIT_QUEUE"
 
 	gimulatorName               = "gimulator-name"

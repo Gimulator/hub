@@ -16,7 +16,7 @@ func init() {
 	viper.BindEnv(s3AccessKey)
 	viper.BindEnv(s3SecretKey)
 
-	viper.BindEnv(rabbitURI)
+	viper.BindEnv(rabbitURL)
 	viper.BindEnv(rabbitQueue)
 
 	if err := ReadEnvironments(); err != nil {
@@ -56,8 +56,8 @@ func S3URL() string {
 
 ///////////////////////////////// Rabbit
 
-func RabbitURI() string {
-	return viper.GetString(rabbitURI)
+func RabbitURL() string {
+	return viper.GetString(rabbitURL)
 }
 func RabbitQueue() string {
 	return viper.GetString(rabbitQueue)

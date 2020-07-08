@@ -382,7 +382,7 @@ func (r *RoomReconciler) reconcileLoggerActor(instance *aiv1.Room) error {
 			{Key: env.LoggerS3SecretKeyEnvKey(), Value: env.S3SecretKey()},
 			{Key: env.LoggerS3BucketEnvKey(), Value: env.LoggerS3Bucket()},
 			{Key: env.LoggerRecorderDirEnvKey(), Value: env.LoggerRecorderDir()},
-			{Key: env.LoggerRabbitURIEnvKey(), Value: env.RabbitURI()},
+			{Key: env.LoggerRabbitURIEnvKey(), Value: env.RabbitURL()},
 			{Key: env.LoggerRabbitQueueEnvKey(), Value: env.RabbitQueue()},
 		},
 		VolumeMounts: []aiv1.VolumeMount{
