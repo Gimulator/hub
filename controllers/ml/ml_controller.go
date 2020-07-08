@@ -207,6 +207,7 @@ func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
 			},
 		},
 	}
+	job.Spec.Template.Spec.RestartPolicy = core.RestartPolicyNever
 
 	return nil
 }
