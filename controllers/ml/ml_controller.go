@@ -34,6 +34,7 @@ import (
 
 	mlv1 "github.com/Gimulator/hub/apis/ml/v1"
 	"github.com/Gimulator/hub/utils/deployer"
+	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/Gimulator/hub/utils/name"
 	rabbit "github.com/Gimulator/hub/utils/rabbitMQ"
 )
@@ -284,23 +285,8 @@ func (m *MLReconciler) evaluatorContainerManifest(src *mlv1.ML, job *batch.Job) 
 					Value: strconv.Itoa(src.Spec.SubmissionID),
 				},
 				{
-					Name:  "QUEUE_SERVER_USER",
-					Value: "user",
-				},
-				{
-					Name: "QUEUE_SERVER_PASSWORD",
-					ValueFrom: &core.EnvVarSource{
-						SecretKeyRef: &core.SecretKeySelector{
-							LocalObjectReference: core.LocalObjectReference{
-								Name: "roboepics-rabbitmq",
-							},
-							Key: "rabbitmq-password",
-						},
-					},
-				},
-				{
-					Name:  "QUEUE_SERVER_HOST",
-					Value: "roboepics-rabbitmq.default.svc.cluster.local:5672",
+					Name:  "QUEUE_SERVER_URL",
+					Value: env.RabbitURL(),
 				},
 				{
 					Name:  "QUEUE_NAME",
