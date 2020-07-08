@@ -186,7 +186,7 @@ func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
 			Name: "data-volume",
 			VolumeSource: core.VolumeSource{
 				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: "data-persist-volume-claim",
+					ClaimName: src.Spec.DataPersistentVolumeClaimName,
 					ReadOnly:  true,
 				},
 			},
@@ -195,7 +195,7 @@ func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
 			Name: "evaluation-volume",
 			VolumeSource: core.VolumeSource{
 				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: "evaluation-persist-volume-claim",
+					ClaimName: src.Spec.EvaluationPersistentVolumeClaimName,
 					ReadOnly:  true,
 				},
 			},

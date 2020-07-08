@@ -33,6 +33,9 @@ type MLSpec struct {
 	CPUResourceLimit         string `json:"cpu-resource-limit"`
 	MemoryResourceLimit      string `json:"memory-resource-limit"`
 	EphemeralResourceLimit   string `json:"ephemeral-resource-limit"`
+
+	DataPersistentVolumeClaimName       string `json:"data-persist-volume-claim-name"`
+	EvaluationPersistentVolumeClaimName string `json:"evaluation-persist-volume-claim-name"`
 }
 
 // MLStatus defines the observed state of ML
