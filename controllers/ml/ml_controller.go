@@ -152,7 +152,7 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCon
 		Status  string `json:"status"`
 		Message string `json:"message"`
 	}{
-		RoomID:  src.Spec.ID,
+		RoomID:  src.Spec.RunID,
 		Status:  "FAIL",
 		Message: "could not find error",
 	}
@@ -177,7 +177,7 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCon
 }
 
 func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
-	job.Name = name.MLJobName(src.Spec.ID)
+	job.Name = name.MLJobName(src.Spec.RunID)
 	job.Namespace = src.Namespace
 	job.Spec.BackoffLimit = &src.Spec.BackoffLimit
 
@@ -276,8 +276,35 @@ func (m *MLReconciler) evaluatorContainerManifest(src *mlv1.ML, job *batch.Job) 
 			},
 			Env: []core.EnvVar{
 				{
-					Name:  "ID",
-					Value: strconv.Itoa(src.Spec.ID),
+					Name:  "RUN_ID",
+					Value: strconv.Itoa(src.Spec.RunID),
+				},
+				{
+					Name:  "SUBMISSION_ID",
+					Value: strconv.Itoa(src.Spec.SubmissionID),
+				},
+				{
+					Name:  "QUEUE_SERVER_USER",
+					Value: "user",
+				},
+				{
+					Name: "QUEUE_SERVER_PASSWORD",
+					ValueFrom: &core.EnvVarSource{
+						SecretKeyRef: &core.SecretKeySelector{
+							LocalObjectReference: core.LocalObjectReference{
+								Name: "roboepics-rabbitmq",
+							},
+							Key: "rabbitmq-password",
+						},
+					},
+				},
+				{
+					Name:  "QUEUE_SERVER_HOST",
+					Value: "roboepics-rabbitmq.default.svc.cluster.local:5672",
+				},
+				{
+					Name:  "QUEUE_NAME",
+					Value: "result",
 				},
 			},
 		},
