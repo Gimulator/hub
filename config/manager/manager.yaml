@@ -56,11 +56,11 @@ spec:
             secretKeyRef:
               name: s3-credential
               key: s3-secret-key
-        - name: RABBIT_URI
+        - name: RABBIT_URL
           valueFrom:
             secretKeyRef:
               name: rabbit-credential
-              key: rabbit-uri
+              key: rabbit-url
         - name: RABBIT_QUEUE
           valueFrom:
             secretKeyRef:
