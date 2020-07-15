@@ -34,9 +34,46 @@ spec:
         spec:
           description: MLSpec defines the desired state of ML
           properties:
-            foo:
-              description: Foo is an example field of ML. Edit ML_types.go to remove/update
+            backoff-limit:
+              format: int32
+              type: integer
+            cpu-resource-limit:
               type: string
+            cpu-resource-request:
+              type: string
+            data-persist-volume-claim-name:
+              type: string
+            ephemeral-resource-limit:
+              type: string
+            ephemeral-resource-request:
+              type: string
+            evaluation-persist-volume-claim-name:
+              type: string
+            evaluator-image:
+              type: string
+            memory-resource-limit:
+              type: string
+            memory-resource-request:
+              type: string
+            run-id:
+              type: integer
+            submission-id:
+              type: integer
+            submission-image:
+              type: string
+          required:
+          - cpu-resource-limit
+          - cpu-resource-request
+          - data-persist-volume-claim-name
+          - ephemeral-resource-limit
+          - ephemeral-resource-request
+          - evaluation-persist-volume-claim-name
+          - evaluator-image
+          - memory-resource-limit
+          - memory-resource-request
+          - run-id
+          - submission-id
+          - submission-image
           type: object
         status:
           description: MLStatus defines the observed state of ML
