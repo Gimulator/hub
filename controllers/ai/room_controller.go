@@ -617,7 +617,7 @@ func (r *RoomReconciler) reconcileLoggerVolumes(instance *aiv1.Room) error {
 }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("resource", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("resource-ai", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}

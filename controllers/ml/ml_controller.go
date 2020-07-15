@@ -30,7 +30,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mlv1 "github.com/Gimulator/hub/apis/ml/v1"
 	"github.com/Gimulator/hub/utils/deployer"
@@ -361,5 +364,18 @@ func (m *MLReconciler) reconcileDataPersistentVolumeClaim(src *mlv1.ML, job *bat
 }
 
 func (m *MLReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("resource-ml", mgr, controller.Options{Reconciler: m})
+	if err != nil {
+		return err
+	}
+
+	if err = c.Watch(
+		&source.Kind{Type: &batch.Job{}},
+		&handler.EnqueueRequestForOwner{
+			OwnerType: &mlv1.ML{},
+		},
+	); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).For(&mlv1.ML{}).Complete(m)
 }
