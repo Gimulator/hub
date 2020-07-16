@@ -86,32 +86,34 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	job := &batch.Job{}
 
-	//if err := m.reconcileDataPersistentVolumeClaim(src, job); err != nil {
-	//	return ctrl.Result{}, err
-	//}
-
-	//if err := m.reconcileEvaluationPersistentVolumeClaim(src, job); err != nil {
-	//	return ctrl.Result{}, err
-	//}
-
+	log.Info("starting to create job manifest")
 	if err := m.jobManifest(src, job); err != nil {
+		log.Error(err, "could not create job manifest")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("starting to create init container manifest")
 	if err := m.initContainerManifest(src, job); err != nil {
+		log.Error(err, "could not create init container manifest")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("starting to create evaluator manifest")
 	if err := m.evaluatorContainerManifest(src, job); err != nil {
+		log.Error(err, "could not create evaluator manifest")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("starting to sync job")
 	syncedJob, err := m.deployer.SyncJob(src, job)
 	if err != nil {
+		log.Error(err, "could not sync job")
 		return ctrl.Result{}, err
 	}
 
+	log.Info("starting to reconcile syncedJob manifest")
 	if err := m.reconcileSyncedJob(src, syncedJob); err != nil {
+		log.Error(err, "could not reconcile syncedJob manifest")
 		return ctrl.Result{}, err
 	}
 
@@ -119,32 +121,39 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
+	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
 	if job.Status.Active > 0 {
+		log.Info("job has still active pods")
 		return nil
 	}
 
 	if job.Status.Succeeded > 0 {
-		return m.reconcileFailedML(src, job.Status.Conditions)
+		log.Info("job has been successful")
+		return m.deployer.DeleteML(src)
 	}
 
 	if job.Status.Conditions != nil && len(job.Status.Conditions) > 0 {
 		con := job.Status.Conditions[0]
 		if con.Type == batch.JobComplete {
-			m.deployer.DeleteML(src)
+			log.Info("job has been completed")
+			return m.deployer.DeleteML(src)
 		}
 		if con.Type == batch.JobFailed {
+			log.Info("job has been failed")
 			return m.reconcileFailedML(src, job.Status.Conditions)
 		}
 	}
 
 	creationTime := job.CreationTimestamp
 	if creationTime.IsZero() {
+		log.Info("job's time is zero")
 		return nil
 	}
 
 	diff := time.Now().Sub(creationTime.Time)
 	if diff > time.Minute*20 {
-		m.deployer.DeleteML(src)
+		log.Info("job's deadline has expired")
+		return m.deployer.DeleteML(src)
 	}
 
 	return nil
