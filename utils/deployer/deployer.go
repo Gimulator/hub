@@ -197,12 +197,12 @@ func (d *Deployer) GetML(nn types.NamespacedName) (*mlv1.ML, error) {
 }
 
 func (d *Deployer) DeleteML(ml *mlv1.ML) error {
-	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	//defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
 
-	//if err := d.Delete(ctx, ml); !errors.IsNotFound(err) {
-	//	return err
-	//}
+	if err := d.Delete(ctx, ml); !errors.IsNotFound(err) {
+		return err
+	}
 	return nil
 }
 
