@@ -12,6 +12,7 @@ import (
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -243,4 +244,21 @@ func (d *Deployer) CreatePVC(pvc *core.PersistentVolumeClaim) error {
 	defer cancel()
 
 	return d.Create(ctx, pvc)
+}
+
+// ********************************************************** sync pod
+
+func (d *Deployer) GetPodListWithJob(job *batch.Job) (*core.PodList, error) {
+	podList := &core.PodList{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	set := labels.Set(map[string]string{"job-name": job.Name})
+	listOptions := &client.ListOptions{
+		LabelSelector: set.AsSelector(),
+	}
+
+	err := d.List(ctx, podList, listOptions)
+	return podList, err
 }

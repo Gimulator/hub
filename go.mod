@@ -14,6 +14,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/viper v1.7.0
 	github.com/streadway/amqp v1.0.0
+	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.4
 	k8s.io/apimachinery v0.18.4

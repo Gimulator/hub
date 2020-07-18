@@ -17,19 +17,25 @@ limitations under the License.
 package ml
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
+	"go.etcd.io/etcd/client"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -152,7 +158,7 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 		}
 		if con.Type == batch.JobFailed {
 			log.Info("job has been failed")
-			return m.reconcileFailedML(src, job.Status.Conditions)
+			return m.reconcileFailedML(src, job)
 		}
 	}
 
@@ -182,7 +188,9 @@ func (m *MLReconciler) reconcileTimeLimitExceeded(src *mlv1.ML) error {
 	return m.deployer.DeleteML(src)
 }
 
-func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCondition) error {
+func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
+	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
+
 	result := struct {
 		RoomID  int    `json:"run_id"`
 		Status  string `json:"status"`
@@ -190,13 +198,23 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCon
 	}{
 		RoomID:  src.Spec.RunID,
 		Status:  "FAIL",
-		Message: "could not find error",
+		Message: "",
 	}
 
+	podLog, err := m.getPodLogs(job)
+	if err == nil {
+		result.Message = podLog
+	} else {
+		log.Error(err, "could not get pod's logs")
+	}
+
+	conditions := job.Status.Conditions
 	if conditions != nil {
 		bytes, err := json.Marshal(conditions)
 		if err == nil {
-			result.Message = string(bytes)
+			result.Message += "\n\nConditions from Xerac:\n" + string(bytes)
+		} else {
+			log.Error(err, "could not marshal conditions")
 		}
 	}
 
@@ -210,6 +228,55 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCon
 	}
 
 	return m.deployer.DeleteML(src)
+}
+
+func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
+	podList, err := m.deployer.GetPodListWithJob(job)
+	if err != nil {
+		return "", err
+	}
+
+	if len(podList.Items) > 1 {
+		return "", fmt.Errorf("podList contains more than one pod")
+	}
+	pod := podList.Items[0]
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return "", fmt.Errorf("error in getting config for creating clientset")
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", fmt.Errorf("error in getting access to K8S for creating clientset")
+	}
+
+	podLogOpts := core.PodLogOptions{
+		Container: "submission",
+	}
+	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return "", fmt.Errorf("error in opening stream to get logs")
+	}
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copy information from podLogs to buf")
+	}
+
+	str := buf.String()
+	if len(str) > 1000 {
+		str = str[:1000]
+	}
+
+	return str, nil
 }
 
 func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
