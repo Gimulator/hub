@@ -124,6 +124,18 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
 	if job.Status.Active > 0 {
 		log.Info("job has still active pods")
+
+		creationTime := job.CreationTimestamp
+		if creationTime.IsZero() {
+			log.Info("job's time is zero")
+			return nil
+		}
+
+		diff := time.Now().Sub(creationTime.Time)
+		if diff > time.Minute*20 {
+			log.Info("job's deadline has expired")
+			return m.reconcileTimeLimitExceeded(src)
+		}
 		return nil
 	}
 
@@ -144,19 +156,30 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 		}
 	}
 
-	creationTime := job.CreationTimestamp
-	if creationTime.IsZero() {
-		log.Info("job's time is zero")
-		return nil
-	}
-
-	diff := time.Now().Sub(creationTime.Time)
-	if diff > time.Minute*20 {
-		log.Info("job's deadline has expired")
-		return m.deployer.DeleteML(src)
-	}
-
 	return nil
+}
+
+func (m *MLReconciler) reconcileTimeLimitExceeded(src *mlv1.ML) error {
+	result := struct {
+		RoomID  int    `json:"run_id"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}{
+		RoomID:  src.Spec.RunID,
+		Status:  "FAIL",
+		Message: "Time limit exceeded",
+	}
+
+	bytes, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	if err := m.rabbit.Send(bytes); err != nil {
+		return err
+	}
+
+	return m.deployer.DeleteML(src)
 }
 
 func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, conditions []batch.JobCondition) error {
