@@ -75,6 +75,9 @@ func NewMLReconciler(mgr manager.Manager, log logr.Logger) (*MLReconciler, error
 
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=mls,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=mls/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=pod,verbs=get;list;watch;create;update;patch;delete
 
 func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := m.log.WithValues("name", req.Name, "namespace", req.Namespace)
@@ -240,15 +243,16 @@ func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
 		return "", fmt.Errorf("podList contains more than one pod")
 	}
 	pod := podList.Items[0]
+	m.log.WithValues("podName", pod.Name, "podNamespace", pod.Namespace).Info("starting to handle result of ml")
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return "", fmt.Errorf("error in getting config for creating clientset")
+		return "", err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return "", fmt.Errorf("error in getting access to K8S for creating clientset")
+		return "", err
 	}
 
 	podLogOpts := core.PodLogOptions{
@@ -261,14 +265,14 @@ func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
 
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
-		return "", fmt.Errorf("error in opening stream to get logs")
+		return "", err
 	}
 	defer podLogs.Close()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, podLogs)
 	if err != nil {
-		return "", fmt.Errorf("error in copy information from podLogs to buf")
+		return "", err
 	}
 
 	str := buf.String()

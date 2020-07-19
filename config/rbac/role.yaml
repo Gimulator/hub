@@ -47,6 +47,18 @@ rules:
   - patch
   - update
 - apiGroups:
+  - ""
+  resources:
+  - pod
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - hub.xerac.cloud
   resources:
   - mls
