@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -249,17 +251,22 @@ func (d *Deployer) CreatePVC(pvc *core.PersistentVolumeClaim) error {
 // ********************************************************** sync pod
 
 func (d *Deployer) GetPodListWithJob(job *batch.Job) (*core.PodList, error) {
-	podList := &core.PodList{}
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
 
 	set := labels.Set(map[string]string{"job-name": job.Name})
-	listOptions := &client.ListOptions{
-		LabelSelector: set.AsSelector(),
-		Namespace:     job.Namespace,
-	}
 
-	err := d.List(ctx, podList, listOptions)
-	return podList, err
+	return clientset.CoreV1().Pods(job.Namespace).List(ctx, meta.ListOptions{
+		LabelSelector: set.AsSelector().String(),
+	})
 }
