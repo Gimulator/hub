@@ -257,6 +257,7 @@ func (d *Deployer) GetPodListWithJob(job *batch.Job) (*core.PodList, error) {
 	set := labels.Set(map[string]string{"job-name": job.Name})
 	listOptions := &client.ListOptions{
 		LabelSelector: set.AsSelector(),
+		Namespace:     job.Namespace,
 	}
 
 	err := d.List(ctx, podList, listOptions)
