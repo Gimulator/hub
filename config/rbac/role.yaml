@@ -49,7 +49,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pod
+  - pods
   verbs:
   - create
   - delete
@@ -58,6 +58,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
 - apiGroups:
   - hub.xerac.cloud
   resources:

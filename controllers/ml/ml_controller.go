@@ -77,7 +77,8 @@ func NewMLReconciler(mgr manager.Manager, log logr.Logger) (*MLReconciler, error
 // +kubebuilder:rbac:groups=hub.xerac.cloud,resources=mls/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=pod,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods/log,verbs=get
 
 func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := m.log.WithValues("name", req.Name, "namespace", req.Namespace)
