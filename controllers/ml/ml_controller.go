@@ -46,6 +46,7 @@ import (
 	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/Gimulator/hub/utils/name"
 	rabbit "github.com/Gimulator/hub/utils/rabbitMQ"
+	"github.com/Gimulator/hub/utils/storage"
 )
 
 // MLReconciler reconciles a ML object
@@ -144,21 +145,21 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 		diff := time.Now().Sub(creationTime.Time)
 		if diff > time.Minute*20 {
 			log.Info("job's deadline has expired")
-			return m.reconcileTimeLimitExceeded(src)
+			return m.reconcileTimeLimitExceededJob(src, job)
 		}
 		return nil
 	}
 
 	if job.Status.Succeeded > 0 {
 		log.Info("job has been successful")
-		return m.deployer.DeleteML(src)
+		return m.deleteML(src, job)
 	}
 
 	if job.Status.Conditions != nil && len(job.Status.Conditions) > 0 {
 		con := job.Status.Conditions[0]
 		if con.Type == batch.JobComplete {
 			log.Info("job has been completed")
-			return m.deployer.DeleteML(src)
+			return m.deleteML(src, job)
 		}
 		if con.Type == batch.JobFailed {
 			log.Info("job has been failed")
@@ -169,7 +170,7 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 	return nil
 }
 
-func (m *MLReconciler) reconcileTimeLimitExceeded(src *mlv1.ML) error {
+func (m *MLReconciler) reconcileTimeLimitExceededJob(src *mlv1.ML, job *batch.Job) error {
 	result := struct {
 		RoomID  int    `json:"run_id"`
 		Status  string `json:"status"`
@@ -189,7 +190,7 @@ func (m *MLReconciler) reconcileTimeLimitExceeded(src *mlv1.ML) error {
 		return err
 	}
 
-	return m.deployer.DeleteML(src)
+	return m.deleteML(src, job)
 }
 
 func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
@@ -202,21 +203,14 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
 	}{
 		RoomID:  src.Spec.RunID,
 		Status:  "FAIL",
-		Message: "",
-	}
-
-	podLog, err := m.getPodLogs(job)
-	if err == nil {
-		result.Message = podLog
-	} else {
-		log.Error(err, "could not get pod's logs")
+		Message: "The cause of the failure is unknown",
 	}
 
 	conditions := job.Status.Conditions
 	if conditions != nil {
 		bytes, err := json.Marshal(conditions)
 		if err == nil {
-			result.Message += "\n\nConditions from Xerac:\n" + string(bytes)
+			result.Message = string(bytes)
 		} else {
 			log.Error(err, "could not marshal conditions")
 		}
@@ -228,6 +222,31 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
 	}
 
 	if err := m.rabbit.Send(bytes); err != nil {
+		return err
+	}
+
+	return m.deleteML(src, job)
+}
+
+func (m *MLReconciler) deleteML(src *mlv1.ML, job *batch.Job) error {
+	output := ""
+
+	podLog, err := m.getPodLogs(job)
+	if err != nil {
+		return err
+	}
+	output += podLog
+
+	conditions := job.Status.Conditions
+	if conditions != nil {
+		bytes, err := json.Marshal(conditions)
+		if err != nil {
+			return err
+		}
+		output += "\n\nXerac Conditions:\n" + string(bytes)
+	}
+
+	if err := storage.PutString(output, "pod-logs", strconv.Itoa(src.Spec.SubmissionID)); err != nil {
 		return err
 	}
 

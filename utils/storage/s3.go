@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"strings"
+
 	env "github.com/Gimulator/hub/utils/environment"
 	"github.com/minio/minio-go"
 	"gopkg.in/yaml.v2"
@@ -54,4 +56,16 @@ func GetStruct(bucket, name string, i interface{}) error {
 	}
 
 	return yaml.Unmarshal(b, i)
+}
+
+func PutString(str, bucket, name string) error {
+	reader := strings.NewReader(str)
+
+	if _, err := s.PutObject(bucket, name, reader, reader.Size(), minio.PutObjectOptions{
+		ContentType: "text/plain",
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
