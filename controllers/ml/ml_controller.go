@@ -33,12 +33,17 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mlv1 "github.com/Gimulator/hub/apis/ml/v1"
@@ -80,6 +85,7 @@ func NewMLReconciler(mgr manager.Manager, log logr.Logger) (*MLReconciler, error
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods/log,verbs=get
+// +kubebuilder:rbac:groups=core,resources=resourcequotas,verbs=get;list;watch;create;update;patch;delete
 
 func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := m.log.WithValues("name", req.Name, "namespace", req.Namespace)
@@ -93,6 +99,25 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		log.Error(err, "could not get ml")
 		return ctrl.Result{}, err
+	}
+
+	log.Info("starting to check quota")
+	if err := m.checkQuota(src); err != nil {
+		log.WithValues("error", err.Error()).Info("not enough quota")
+		src.Status.StatusType = mlv1.MLStatusTypePending
+		if _, err := m.deployer.SyncML(src); err != nil {
+			log.Error(err, "could not update ml status")
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if src.Status.StatusType == "" {
+		log.Info("starting to set status to unknown")
+		src.Status.StatusType = mlv1.MLStatusTypeUnknown
+		if _, err := m.deployer.SyncML(src); err != nil {
+			log.Error(err, "could not update ml status")
+			return ctrl.Result{}, err
+		}
 	}
 
 	job := &batch.Job{}
@@ -122,6 +147,11 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	src.Status.StatusType = mlv1.MLStatusTypeRunning
+	if _, err := m.deployer.SyncML(src); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Info("starting to reconcile syncedJob manifest")
 	if err := m.reconcileSyncedJob(src, syncedJob); err != nil {
 		log.Error(err, "could not reconcile syncedJob manifest")
@@ -129,6 +159,49 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (m *MLReconciler) checkQuota(src *mlv1.ML) error {
+	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
+
+	if src.Status.StatusType == mlv1.MLStatusTypeRunning || src.Status.StatusType == mlv1.MLStatusTypeUnknown {
+		log.Info("resource is already in progress")
+		return nil
+	}
+
+	quota, err := m.deployer.GetResourceQuota(types.NamespacedName{Name: "resource-quota", Namespace: "hub-system"})
+	if err != nil {
+		return err
+	}
+	log.Info("-----------------------------------------")
+	log.Info(quota.Status.String())
+
+	cpuLimit := quota.Status.Hard["limits.cpu"].DeepCopy()
+	cpuUsed := quota.Status.Used["limits.cpu"].DeepCopy()
+	log.WithValues("used cpu", cpuUsed.String()).WithValues("hard cpu", cpuLimit.String()).Info("more information")
+	cpuLimit.Sub(cpuUsed.DeepCopy())
+	log.WithValues("available cpu", cpuLimit.String()).Info("more information")
+
+	memoryLimit := quota.Status.Hard["limits.memory"].DeepCopy()
+	memoryUsed := quota.Status.Used["limits.memory"].DeepCopy()
+	log.WithValues("used memory", memoryUsed.String()).WithValues("hard memory", memoryLimit.String()).Info("more information")
+	memoryLimit.Sub(memoryUsed.DeepCopy())
+	log.WithValues("available memory", memoryLimit.String()).Info("more information")
+
+	resourceCPU := resource.MustParse(src.Spec.CPUResourceLimit)
+	resourceMemory := resource.MustParse(src.Spec.MemoryResourceLimit)
+
+	log.WithValues("resource cpu", resourceCPU.String()).WithValues("resource memory", resourceMemory.String()).Info("more information")
+
+	if cpuLimit.Cmp(resourceCPU) < 0 {
+		return fmt.Errorf("not enough cpu quota")
+	}
+
+	if memoryLimit.Cmp(resourceMemory) < 0 {
+		return fmt.Errorf("not enough memory quota")
+	}
+
+	return nil
 }
 
 func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
@@ -258,49 +331,95 @@ func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log := ""
 
-	if len(podList.Items) > 1 {
-		return "", fmt.Errorf("podList contains more than one pod")
+	for i, pod := range podList.Items {
+		m.log.WithValues("podName", pod.Name, "podNamespace", pod.Namespace).Info("starting to handle result of ml")
+
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return "", err
+		}
+
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return "", err
+		}
+
+		podLogOpts := core.PodLogOptions{
+			Container: "submission",
+		}
+		req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+		defer cancel()
+
+		podLogs, err := req.Stream(ctx)
+		if err != nil {
+			return "", err
+		}
+		defer podLogs.Close()
+
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, podLogs)
+		if err != nil {
+			return "", err
+		}
+
+		str := buf.String()
+		if len(str) > 1000 {
+			str = str[:1000] + "\n..."
+		}
+
+		log += fmt.Sprintf("\n\nlog of %d-th time of run: \n%s", i, str)
 	}
-	pod := podList.Items[0]
-	m.log.WithValues("podName", pod.Name, "podNamespace", pod.Namespace).Info("starting to handle result of ml")
 
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "", err
-	}
+	// if len(podList.Items) > 1 {
+	// 	return "", fmt.Errorf("podList contains more than one pod")
+	// }
 
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
+	// if len(podList.Items) < 1 {
+	// 	return "", fmt.Errorf("podList containes no pod")
+	// }
+	// pod := podList.Items[0]
+	// m.log.WithValues("podName", pod.Name, "podNamespace", pod.Namespace).Info("starting to handle result of ml")
 
-	podLogOpts := core.PodLogOptions{
-		Container: "submission",
-	}
-	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+	// config, err := rest.InClusterConfig()
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	defer cancel()
+	// clientset, err := kubernetes.NewForConfig(config)
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	podLogs, err := req.Stream(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer podLogs.Close()
+	// podLogOpts := core.PodLogOptions{
+	// 	Container: "submission",
+	// }
+	// req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return "", err
-	}
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	// defer cancel()
 
-	str := buf.String()
-	if len(str) > 1000 {
-		str = str[:1000]
-	}
+	// podLogs, err := req.Stream(ctx)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// defer podLogs.Close()
 
-	return str, nil
+	// buf := new(bytes.Buffer)
+	// _, err = io.Copy(buf, podLogs)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// str := buf.String()
+	// if len(str) > 1000 {
+	// 	str = str[:1000]
+	// }
+
+	return log, nil
 }
 
 func (m *MLReconciler) jobManifest(src *mlv1.ML, job *batch.Job) error {
@@ -500,5 +619,63 @@ func (m *MLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	); err != nil {
 		return err
 	}
+
+	if err = c.Watch(&source.Kind{Type: &mlv1.ML{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(func(mapObject handler.MapObject) []reconcile.Request {
+			log := m.log.WithValues("from", "resource-controller")
+
+			log.Info("starting to list mls")
+			mls, err := m.deployer.ListMLs()
+			if err != nil {
+				log.Error(err, "could not list mls")
+				return []reconcile.Request{}
+			}
+
+			var candidateML *mlv1.ML = nil
+			for _, ml := range mls.Items {
+				if ml.Status.StatusType != mlv1.MLStatusTypePending || ml.CreationTimestamp.IsZero() {
+					continue
+				}
+
+				if candidateML == nil {
+					candidateML = &ml
+					continue
+				}
+
+				if candidateML.CreationTimestamp.After(ml.CreationTimestamp.Time) {
+					candidateML = &ml
+				}
+			}
+
+			if candidateML != nil {
+				log.WithValues("candidate", candidateML.Name).Info("create reconcile.request")
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{Name: candidateML.Name, Namespace: candidateML.Namespace}},
+				}
+			}
+			log.Info("nil candidate ml")
+			return []reconcile.Request{}
+		}),
+	}, predicate.Funcs{
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			log.Log.Info("delete func predicate")
+			return true
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			log.Log.Info("create func predicate")
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			log.Log.Info("update func predicate")
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			log.Log.Info("generate func predicate")
+			return false
+		},
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).For(&mlv1.ML{}).Complete(m)
 }

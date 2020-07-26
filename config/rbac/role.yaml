@@ -65,6 +65,18 @@ rules:
   verbs:
   - get
 - apiGroups:
+  - ""
+  resources:
+  - resourcequotas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - hub.xerac.cloud
   resources:
   - mls

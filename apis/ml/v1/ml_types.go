@@ -39,13 +39,21 @@ type MLSpec struct {
 	EvaluationPersistentVolumeClaimName string `json:"evaluation-persist-volume-claim-name"`
 }
 
+type MLStatusType string
+
+const (
+	MLStatusTypeUnknown MLStatusType = "unknown"
+	MLStatusTypeRunning MLStatusType = "running"
+	MLStatusTypePending MLStatusType = "pending"
+)
+
 // MLStatus defines the observed state of ML
 type MLStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	StatusType MLStatusType `json:"status-type,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="status-type",type=string,JSONPath=`.status.status-type`
 
 // ML is the Schema for the mls API
 type ML struct {

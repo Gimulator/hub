@@ -77,6 +77,9 @@ spec:
           type: object
         status:
           description: MLStatus defines the observed state of ML
+          properties:
+            status:
+              type: string
           type: object
       type: object
   version: v1

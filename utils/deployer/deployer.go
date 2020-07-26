@@ -199,6 +199,16 @@ func (d *Deployer) GetML(nn types.NamespacedName) (*mlv1.ML, error) {
 	return ml, err
 }
 
+func (d *Deployer) ListMLs() (*mlv1.MLList, error) {
+	mls := &mlv1.MLList{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	err := d.List(ctx, mls, &client.ListOptions{Namespace: "hub-system"})
+	return mls, err
+}
+
 func (d *Deployer) DeleteML(ml *mlv1.ML) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
 	defer cancel()
@@ -269,4 +279,16 @@ func (d *Deployer) GetPodListWithJob(job *batch.Job) (*core.PodList, error) {
 	return clientset.CoreV1().Pods(job.Namespace).List(ctx, meta.ListOptions{
 		LabelSelector: set.AsSelector().String(),
 	})
+}
+
+// ********************************************************** sync resource quota
+
+func (d *Deployer) GetResourceQuota(nn types.NamespacedName) (*core.ResourceQuota, error) {
+	quota := &core.ResourceQuota{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
+	defer cancel()
+
+	err := d.Get(ctx, nn, quota)
+	return quota, err
 }
