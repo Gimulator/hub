@@ -8,6 +8,10 @@ metadata:
   creationTimestamp: null
   name: mls.hub.xerac.cloud
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.status-type
+    name: status-type
+    type: string
   group: hub.xerac.cloud
   names:
     kind: ML
@@ -15,6 +19,7 @@ spec:
     plural: mls
     singular: ml
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: ML is the Schema for the mls API
@@ -78,7 +83,7 @@ spec:
         status:
           description: MLStatus defines the observed state of ML
           properties:
-            status:
+            status-type:
               type: string
           type: object
       type: object
