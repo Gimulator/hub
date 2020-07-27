@@ -147,12 +147,13 @@ func (m *MLReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	log.Info("starting to set status to running")
 	src.Status.StatusType = mlv1.MLStatusTypeRunning
 	if _, err := m.deployer.SyncML(src); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	log.Info("starting to reconcile syncedJob manifest")
+	log.Info("starting to reconcile syncedJob")
 	if err := m.reconcileSyncedJob(src, syncedJob); err != nil {
 		log.Error(err, "could not reconcile syncedJob manifest")
 		return ctrl.Result{}, err
@@ -216,7 +217,7 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 		}
 
 		diff := time.Now().Sub(creationTime.Time)
-		if diff > time.Minute*20 {
+		if diff > time.Minute*120 {
 			log.Info("job's deadline has expired")
 			return m.reconcileTimeLimitExceededJob(src, job)
 		}
@@ -244,6 +245,9 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 }
 
 func (m *MLReconciler) reconcileTimeLimitExceededJob(src *mlv1.ML, job *batch.Job) error {
+	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
+	log.Info("starting to delete time limit exceeded job")
+
 	result := struct {
 		RoomID  int    `json:"run_id"`
 		Status  string `json:"status"`
@@ -268,6 +272,7 @@ func (m *MLReconciler) reconcileTimeLimitExceededJob(src *mlv1.ML, job *batch.Jo
 
 func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
 	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
+	log.Info("starting to delete failed job")
 
 	result := struct {
 		RoomID  int    `json:"run_id"`
@@ -302,6 +307,9 @@ func (m *MLReconciler) reconcileFailedML(src *mlv1.ML, job *batch.Job) error {
 }
 
 func (m *MLReconciler) deleteML(src *mlv1.ML, job *batch.Job) error {
+	log := m.log.WithValues("name", src.Name, "namespace", src.Namespace)
+	log.Info("starting to delete ML by deployer")
+
 	output := ""
 
 	podLog, err := m.getPodLogs(job)
@@ -319,10 +327,12 @@ func (m *MLReconciler) deleteML(src *mlv1.ML, job *batch.Job) error {
 		output += "\n\nXerac Conditions:\n" + string(bytes)
 	}
 
+	log.Info("starting to put string to s3")
 	if err := storage.PutString(output, "pod-logs", strconv.Itoa(src.Spec.SubmissionID)); err != nil {
 		return err
 	}
 
+	log.Info("starting to delete ML with deployer")
 	return m.deployer.DeleteML(src)
 }
 
