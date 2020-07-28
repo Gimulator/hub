@@ -378,8 +378,8 @@ func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
 		}
 
 		str := buf.String()
-		if len(str) > 1000 {
-			str = str[:1000] + "\n..."
+		if len(str) > 10000 {
+			str = str[:10000] + "\n..."
 		}
 
 		log += fmt.Sprintf("\n\nlog of %d-th time of run: \n%s", i, str)
