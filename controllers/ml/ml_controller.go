@@ -216,8 +216,8 @@ func (m *MLReconciler) reconcileSyncedJob(src *mlv1.ML, job *batch.Job) error {
 			return nil
 		}
 
-		diff := time.Now().Sub(creationTime.Time)
-		if diff > time.Minute*120 {
+		diff := time.Now().Sub(creationTime.Time).Seconds()
+		if diff > 7200 {
 			log.Info("job's deadline has expired")
 			return m.reconcileTimeLimitExceededJob(src, job)
 		}
@@ -314,7 +314,8 @@ func (m *MLReconciler) deleteML(src *mlv1.ML, job *batch.Job) error {
 
 	podLog, err := m.getPodLogs(job)
 	if err != nil {
-		return err
+		podLog = ""
+		//return err
 	}
 	output += podLog
 
@@ -383,51 +384,6 @@ func (m *MLReconciler) getPodLogs(job *batch.Job) (string, error) {
 
 		log += fmt.Sprintf("\n\nlog of %d-th time of run: \n%s", i, str)
 	}
-
-	// if len(podList.Items) > 1 {
-	// 	return "", fmt.Errorf("podList contains more than one pod")
-	// }
-
-	// if len(podList.Items) < 1 {
-	// 	return "", fmt.Errorf("podList containes no pod")
-	// }
-	// pod := podList.Items[0]
-	// m.log.WithValues("podName", pod.Name, "podNamespace", pod.Namespace).Info("starting to handle result of ml")
-
-	// config, err := rest.InClusterConfig()
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// clientset, err := kubernetes.NewForConfig(config)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// podLogOpts := core.PodLogOptions{
-	// 	Container: "submission",
-	// }
-	// req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.APICallTimeout))
-	// defer cancel()
-
-	// podLogs, err := req.Stream(ctx)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// defer podLogs.Close()
-
-	// buf := new(bytes.Buffer)
-	// _, err = io.Copy(buf, podLogs)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// str := buf.String()
-	// if len(str) > 1000 {
-	// 	str = str[:1000]
-	// }
 
 	return log, nil
 }
