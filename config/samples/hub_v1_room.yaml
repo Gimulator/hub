@@ -1,0 +1,7 @@
+apiVersion: hub.roboepics.com/v1
+kind: Room
+metadata:
+  name: room-sample
+spec:
+  # Add fields here
+  foo: bar

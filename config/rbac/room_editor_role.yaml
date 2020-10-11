@@ -1,0 +1,24 @@
+# permissions for end users to edit rooms.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: room-editor-role
+rules:
+- apiGroups:
+  - hub.roboepics.com
+  resources:
+  - rooms
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hub.roboepics.com
+  resources:
+  - rooms/status
+  verbs:
+  - get
