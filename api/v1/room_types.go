@@ -1,6 +1,4 @@
 /*
-
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,22 +18,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Actor defines some actor of a Room
+type Actor struct {
+	ID    string `json:"id"`
+	Image string `json:"image"`
+}
+
+// ActorStatus defines the observed state of Actor
+type ActorStatus struct {
+}
+
+// Director defines the director of a Room
+type Director struct {
+	ID    string `json:"id"`
+	Image string `json:"image"`
+}
+
+// DirectorStatus defines the observed state of Director
+type DirectorStatus struct {
+}
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Room. Edit Room_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ID        string   `json:"id"`
+	Actors    []Actor  `json:"actors"`
+	Director  Director `json:"director"`
+	Gimulator bool     `json:"gimulator"`
+	Volume    bool     `json:"volume"`
 }
 
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	DirectorStatus DirectorStatus `json:"directorStatus"`
+	ActorStatuses  []ActorStatus  `json:"actorStatuses"`
 }
 
 // +kubebuilder:object:root=true
