@@ -15,6 +15,7 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,17 +41,17 @@ type DirectorStatus struct {
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	ID        string   `json:"id"`
-	Actors    []Actor  `json:"actors"`
-	Director  Director `json:"director"`
-	Gimulator bool     `json:"gimulator"`
-	Volume    bool     `json:"volume"`
+	Game     string   `json:"game"`
+	ID       string   `json:"id"`
+	Actors   []Actor  `json:"actors"`
+	Director Director `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
-	DirectorStatus DirectorStatus `json:"directorStatus"`
-	ActorStatuses  []ActorStatus  `json:"actorStatuses"`
+	GimulatorStatus *corev1.PodStatus            `json:"gimulatorStatus"`
+	DirectorStatus  *corev1.PodStatus            `json:"directorStatus"`
+	ActorStatuses   map[string]*corev1.PodStatus `json:"actorStatuses"`
 }
 
 // +kubebuilder:object:root=true

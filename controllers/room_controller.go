@@ -18,32 +18,146 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
+	"github.com/Gimulator/hub/pkg/client"
+	"github.com/Gimulator/hub/pkg/config"
+)
+
+var (
+	ReconcilationTimeout = time.Second * 10
 )
 
 // RoomReconciler reconciles a Room object
 type RoomReconciler struct {
-	client.Client
+	*client.Client
+	*actorReconciler
+	*gimulatorReconciler
+	*directorReconciler
+
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
+// NewRoomReconciler returns new instance of RoomReconciler
+func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, error) {
+	client, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
+	if err != nil {
+		return nil, err
+	}
+
+	actorReconciler, err := newActorReconciler(client, log)
+	if err != nil {
+		return nil, err
+	}
+
+	directorReconciler, err := newDirectorReconciler(client, log)
+	if err != nil {
+		return nil, err
+	}
+
+	gimulatorReconciler, err := newGimulatorReconciler(client, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RoomReconciler{
+		Log:                 log,
+		Scheme:              mgr.GetScheme(),
+		Client:              client,
+		actorReconciler:     actorReconciler,
+		gimulatorReconciler: gimulatorReconciler,
+		directorReconciler:  directorReconciler,
+	}, nil
+}
+
 // +kubebuilder:rbac:groups=hub.roboepics.com,resources=rooms,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hub.roboepics.com,resources=rooms/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=pod,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pod/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=persistVolumeClaim,verbs=get;list;watch;create;update;patch;delete
 
+// Reconcile reconciles a request for a Room object
 func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("room", req.NamespacedName)
+	ctx, cancle := context.WithTimeout(context.TODO(), ReconcilationTimeout)
+	defer cancle()
 
-	// your logic here
+	logger := r.Log.WithValues("reconciler", "Room", "room", req.NamespacedName)
+
+	room, err := r.GetRoom(ctx, req.NamespacedName)
+	if errors.IsNotFound(err) {
+		logger.Info("room does not exist")
+	} else if err != nil {
+		logger.Error(err, "could not get room object")
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("starting to fetch game configuration")
+	gameConfig, err := config.FetchGameConfig(room)
+	if err != nil {
+		logger.Error(err, "could not fetch game configuration", "game", room.Spec.Game)
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("starting to reconcile needed PVCs")
+	if err := r.checkPVCs(ctx, gameConfig); err != nil {
+		logger.Error(err, "could not reconcile needed PVCs")
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("starting to reconcile Gimulator")
+	if err := r.reconcileGimulator(ctx, room, gameConfig); err != nil {
+		logger.Error(err, "could not reconcile gimulator")
+	}
+
+	logger.Info("starting to reconcile director")
+	if err := r.reconcileDirector(ctx, room, gameConfig); err != nil {
+		logger.Error(err, "could not reconcile director")
+	}
+
+	logger.Info("starting to reconcile actors")
+	for i := range room.Spec.Actors {
+		actor := &room.Spec.Actors[i]
+		if err := r.reconcileActor(ctx, room, actor, gameConfig); err != nil {
+			logger.Error(err, "could not reconcile actor", "actor", actor.ID)
+			return ctrl.Result{}, err
+		}
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *RoomReconciler) checkPVCs(ctx context.Context, gameConfig config.GameConfig) error {
+	if gameConfig.DataPVCName != "" {
+		key := types.NamespacedName{
+			Name:      gameConfig.DataPVCName,
+			Namespace: gameConfig.Namespace,
+		}
+		if _, err := r.GetPVC(ctx, key); err != nil {
+			return err
+		}
+	}
+	if gameConfig.FactPVCName != "" {
+		key := types.NamespacedName{
+			Name:      gameConfig.FactPVCName,
+			Namespace: gameConfig.Namespace,
+		}
+		if _, err := r.GetPVC(ctx, key); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
