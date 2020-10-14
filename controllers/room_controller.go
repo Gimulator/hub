@@ -103,32 +103,31 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger.Info("starting to fetch game configuration")
-	gameConfig, err := config.FetchGameConfig(room)
-	if err != nil {
+	if err := config.FetchGameConfig(room); err != nil {
 		logger.Error(err, "could not fetch game configuration", "game", room.Spec.Game)
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("starting to reconcile needed PVCs")
-	if err := r.checkPVCs(ctx, gameConfig); err != nil {
-		logger.Error(err, "could not reconcile needed PVCs")
+	logger.Info("starting to checkup needed PVCs")
+	if err := r.checkPVCs(ctx, room); err != nil {
+		logger.Error(err, "could not checkup  needed PVCs")
 		return ctrl.Result{}, err
 	}
 
 	logger.Info("starting to reconcile Gimulator")
-	if err := r.reconcileGimulator(ctx, room, gameConfig); err != nil {
+	if err := r.reconcileGimulator(ctx, room); err != nil {
 		logger.Error(err, "could not reconcile gimulator")
 	}
 
 	logger.Info("starting to reconcile director")
-	if err := r.reconcileDirector(ctx, room, gameConfig); err != nil {
+	if err := r.reconcileDirector(ctx, room); err != nil {
 		logger.Error(err, "could not reconcile director")
 	}
 
 	logger.Info("starting to reconcile actors")
 	for i := range room.Spec.Actors {
 		actor := &room.Spec.Actors[i]
-		if err := r.reconcileActor(ctx, room, actor, gameConfig); err != nil {
+		if err := r.reconcileActor(ctx, room, actor); err != nil {
 			logger.Error(err, "could not reconcile actor", "actor", actor.ID)
 			return ctrl.Result{}, err
 		}
@@ -137,20 +136,20 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *RoomReconciler) checkPVCs(ctx context.Context, gameConfig config.GameConfig) error {
-	if gameConfig.DataPVCName != "" {
+func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error {
+	if room.Spec.GameConfig.DataPVCName != "" {
 		key := types.NamespacedName{
-			Name:      gameConfig.DataPVCName,
-			Namespace: gameConfig.Namespace,
+			Name:      room.Spec.GameConfig.DataPVCName,
+			Namespace: room.Namespace,
 		}
 		if _, err := r.GetPVC(ctx, key); err != nil {
 			return err
 		}
 	}
-	if gameConfig.FactPVCName != "" {
+	if room.Spec.GameConfig.FactPVCName != "" {
 		key := types.NamespacedName{
-			Name:      gameConfig.FactPVCName,
-			Namespace: gameConfig.Namespace,
+			Name:      room.Spec.GameConfig.FactPVCName,
+			Namespace: room.Namespace,
 		}
 		if _, err := r.GetPVC(ctx, key); err != nil {
 			return err

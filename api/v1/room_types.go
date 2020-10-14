@@ -19,6 +19,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type GameConfig struct {
+	DataPVCName      string `json:"dataPVCName"`
+	FactPVCName      string `json:"factPVCName"`
+	GimulatorImage   string `json:"gimulatorImage"`
+	OutputVolumeSize string `json:"outputVolumeSize"`
+}
+
 // Actor defines some actor of a Room
 type Actor struct {
 	ID    string `json:"id"`
@@ -41,10 +48,11 @@ type DirectorStatus struct {
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	Game     string   `json:"game"`
-	ID       string   `json:"id"`
-	Actors   []Actor  `json:"actors"`
-	Director Director `json:"director"`
+	ID         string      `json:"id"`
+	Game       string      `json:"game"`
+	GameConfig *GameConfig `json:"gameConfig,omitempty"`
+	Actors     []Actor     `json:"actors"`
+	Director   Director    `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room

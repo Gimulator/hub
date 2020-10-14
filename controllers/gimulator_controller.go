@@ -5,13 +5,10 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
-	"github.com/Gimulator/hub/pkg/config"
 	"github.com/Gimulator/hub/pkg/name"
 )
 
@@ -29,53 +26,41 @@ func newGimulatorReconciler(client *client.Client, log logr.Logger) (*gimulatorR
 	}, nil
 }
 
-func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv1.Room, gameConfig config.GameConfig) error {
+func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv1.Room) error {
 	logger := g.Log.WithValues("reconciler", "Gimulator", "room", room.Spec.ID)
 
-	if gameConfig.GimulatorImage == "" {
-		logger.Info("no need to gimulator")
+	if room.Spec.GameConfig.GimulatorImage == "" {
+		logger.Info("this game doesn't need gimulator")
 		return nil
-	}
-
-	key := types.NamespacedName{
-		Name:      name.GimulatorPodName(room.Spec.ID),
-		Namespace: room.Namespace,
-	}
-
-	logger.Info("starting to get gimulator's Pod")
-	pod, err := g.GetPod(ctx, key)
-	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(err, "could not get gimulator's Pod")
-		return err
-	} else if err == nil {
-		logger.Info("starting to update status of gimulator because pod is present")
-		g.updateGimulatorStatus(room, pod)
-		return nil
-	} else {
-		logger.Info("gimulator's pod is not found")
 	}
 
 	logger.Info("starting to create gimulator's manifest")
-	pod = g.gimulatorPodManifest(gameConfig)
+	gimPod := g.gimulatorPodManifest(room)
 
-	logger.Info("starting to sync actor's pod")
-	syncedPod, err := g.SyncPod(ctx, pod)
+	logger.Info("starting to sync gimulator's pod")
+	syncedGimPod, err := g.SyncPod(ctx, gimPod, room)
 	if err != nil {
 		logger.Error(err, "could not sync gimulator's pod")
 		return err
 	}
 
+	logger.Info("starting to reconcile gimulator's service")
+	if err := g.reconcileGimulatorService(ctx, room); err != nil {
+		logger.Error(err, "could not reconcile gimulator's service")
+		return err
+	}
+
 	logger.Info("starting to update status of gimulator")
-	g.updateGimulatorStatus(room, syncedPod)
+	g.updateGimulatorStatus(room, syncedGimPod)
 
 	return nil
 }
 
-func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, gameConfig config.GameConfig) error {
+func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, room *hubv1.Room) error {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.GimulatorServiceName(gameConfig.RoomID),
-			Namespace: gameConfig.Namespace,
+			Name:      name.GimulatorServiceName(room.Spec.ID),
+			Namespace: room.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -85,25 +70,25 @@ func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, gam
 			},
 			Selector: map[string]string{
 				name.PodTypeLabel(): name.PodTypeGimulator(),
-				name.RoomIDLabel():  gameConfig.RoomID,
+				name.RoomIDLabel():  room.Spec.ID,
 			},
 		},
 	}
 
-	_, err := g.SyncService(ctx, service)
+	_, err := g.SyncService(ctx, service, room)
 	return err
 }
 
-func (g *gimulatorReconciler) gimulatorPodManifest(gameConfig config.GameConfig) *corev1.Pod {
+func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) *corev1.Pod {
 	labels := map[string]string{
 		name.PodTypeLabel(): name.PodTypeGimulator(),
-		name.RoomIDLabel():  gameConfig.RoomID,
+		name.RoomIDLabel():  room.Spec.ID,
 	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.GimulatorPodName(gameConfig.RoomID),
-			Namespace: gameConfig.Namespace,
+			Name:      name.GimulatorPodName(room.Spec.ID),
+			Namespace: room.Namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{
@@ -111,7 +96,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(gameConfig config.GameConfig)
 			Containers: []corev1.Container{
 				{
 					Name:            name.GimulatorContainerName(),
-					Image:           gameConfig.GimulatorImage,
+					Image:           room.Spec.GameConfig.GimulatorImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Resources:       corev1.ResourceRequirements{},
 					Env:             []corev1.EnvVar{},

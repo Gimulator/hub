@@ -5,14 +5,11 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
-	"github.com/Gimulator/hub/pkg/config"
 	"github.com/Gimulator/hub/pkg/name"
 )
 
@@ -30,51 +27,33 @@ func newDirectorReconciler(client *client.Client, log logr.Logger) (*directorRec
 	}, nil
 }
 
-func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.Room, gameConfig config.GameConfig) error {
-	logger := a.Log.WithValues("reconciler", "Director", "director", room.Spec.Director.ID, "room", gameConfig.RoomID)
-
-	key := types.NamespacedName{
-		Name:      room.Spec.Director.ID,
-		Namespace: gameConfig.RoomID,
-	}
-
-	logger.Info("starting to get director's Pod")
-	pod, err := a.GetPod(ctx, key)
-	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(err, "could not get director's Pod")
-		return err
-	} else if err == nil {
-		logger.Info("starting to update status of director because pod is present")
-		a.updateDirectorStatus(room, pod)
-		return nil
-	} else {
-		logger.Info("director's pod is not found")
-	}
+func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.Room) error {
+	logger := a.Log.WithValues("reconciler", "Director", "director", room.Spec.Director.ID, "room", room.Spec.ID)
 
 	logger.Info("starting to reconcile director's output PVC")
-	if err := a.reconcileOutputPVC(ctx, room, gameConfig); err != nil {
+	if err := a.reconcileOutputPVC(ctx, room); err != nil {
 		logger.Error(err, "could not reconcile director's output PVC")
 		return err
 	}
 
 	logger.Info("starting to create director's manifest")
-	pod = a.directorPodManifest(room, gameConfig)
+	dirPod := a.directorPodManifest(room)
 
 	logger.Info("starting to sync director's pod")
-	syncedPod, err := a.SyncPod(ctx, pod)
+	syncedDirPod, err := a.SyncPod(ctx, dirPod, room)
 	if err != nil {
 		logger.Error(err, "could not sync director's pod")
 		return err
 	}
 
 	logger.Info("starting to update status of director")
-	a.updateDirectorStatus(room, syncedPod)
+	a.updateDirectorStatus(room, syncedDirPod)
 
 	return nil
 }
 
-func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1.Room, gameConfig config.GameConfig) error {
-	quantity, err := resource.ParseQuantity(gameConfig.OutputVolumeSize)
+func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1.Room) error {
+	quantity, err := resource.ParseQuantity(room.Spec.GameConfig.OutputVolumeSize)
 	if err != nil {
 		return err
 	}
@@ -82,7 +61,7 @@ func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.OutputPVCName(room.Spec.Director.ID),
-			Namespace: gameConfig.Namespace,
+			Namespace: room.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			Resources: corev1.ResourceRequirements{
@@ -96,7 +75,7 @@ func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1
 		},
 	}
 
-	_, err = a.SyncPVC(ctx, pvc)
+	_, err = a.SyncPVC(ctx, pvc, room)
 	return err
 }
 
@@ -104,7 +83,7 @@ func (a *directorReconciler) updateDirectorStatus(room *hubv1.Room, pod *corev1.
 	room.Status.DirectorStatus = pod.Status.DeepCopy()
 }
 
-func (a *directorReconciler) directorPodManifest(room *hubv1.Room, gameConfig config.GameConfig) *corev1.Pod {
+func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
@@ -122,12 +101,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room, gameConfig co
 		MountPath: name.OutputVolumeMountDir(),
 	})
 
-	if gameConfig.DataPVCName != "" {
+	if room.Spec.GameConfig.DataPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.DataVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: gameConfig.DataPVCName,
+					ClaimName: room.Spec.GameConfig.DataPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -139,12 +118,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room, gameConfig co
 		})
 	}
 
-	if gameConfig.FactPVCName != "" {
+	if room.Spec.GameConfig.FactPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.FactVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: gameConfig.FactPVCName,
+					ClaimName: room.Spec.GameConfig.FactPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -158,14 +137,14 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room, gameConfig co
 
 	labels := map[string]string{
 		name.DirectorIDLabel(): room.Spec.Director.ID,
-		name.RoomIDLabel():     gameConfig.RoomID,
+		name.RoomIDLabel():     room.Spec.ID,
 		name.PodTypeLabel():    name.PodTypeDirector(),
 	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.DirectorPodName(room.Spec.Director.ID),
-			Namespace: gameConfig.Namespace,
+			Namespace: room.Namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{

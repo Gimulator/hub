@@ -81,7 +81,7 @@ func (c *Client) DeleteRoom(ctx context.Context, room *hubv1.Room) error {
 //////////////////////////////////////////////////
 
 // SyncPod takes a Pod object and updates it or creates it if not exists
-func (c *Client) SyncPod(ctx context.Context, pod *corev1.Pod) (*corev1.Pod, error) {
+func (c *Client) SyncPod(ctx context.Context, pod *corev1.Pod, owner metav1.Object) (*corev1.Pod, error) {
 	syncedPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
@@ -95,6 +95,7 @@ func (c *Client) SyncPod(ctx context.Context, pod *corev1.Pod) (*corev1.Pod, err
 				syncedPod.Annotations = pod.Annotations
 				syncedPod.Labels = pod.Labels
 				syncedPod.Spec = pod.Spec
+				controllerutil.SetOwnerReference(owner, syncedPod, c.Scheme)
 				return nil
 			})
 			return err
@@ -124,7 +125,7 @@ func (c *Client) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 //////////////////////////////////////////////////
 
 // SyncPVC takes a PVC object and updates it or creates it if not exists
-func (c *Client) SyncPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
+func (c *Client) SyncPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim, owner metav1.Object) (*corev1.PersistentVolumeClaim, error) {
 	syncedPVC := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pvc.Name,
@@ -136,6 +137,7 @@ func (c *Client) SyncPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim)
 		func() error {
 			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedPVC, func() error {
 				syncedPVC.Spec = *pvc.Spec.DeepCopy()
+				controllerutil.SetOwnerReference(owner, syncedPVC, c.Scheme)
 				return nil
 			})
 			return err
@@ -165,7 +167,7 @@ func (c *Client) DeletePVC(ctx context.Context, pvc *corev1.PersistentVolumeClai
 //////////////////////////////////////////////////
 
 // SyncService takes a Service object and updates it or creates it if not exists
-func (c *Client) SyncService(ctx context.Context, service *corev1.Service) (*corev1.Service, error) {
+func (c *Client) SyncService(ctx context.Context, service *corev1.Service, owner metav1.Object) (*corev1.Service, error) {
 	syncedService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      service.Name,
@@ -177,6 +179,7 @@ func (c *Client) SyncService(ctx context.Context, service *corev1.Service) (*cor
 		func() error {
 			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedService, func() error {
 				syncedService.Spec = *service.Spec.DeepCopy()
+				controllerutil.SetOwnerReference(owner, syncedService, c.Scheme)
 				return nil
 			})
 			return err
