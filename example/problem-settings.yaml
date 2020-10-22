@@ -1,0 +1,7 @@
+dataPVCName: "name-of-data-pvc"
+factPVCName: "name-of-fact-pvc"
+gimulatorImage: "https://url/to/image"
+outputVolumeSize: "1G" # or "500M"
+resourceCPULimit: "1" # or "500m"
+resourceMemoryLimit: "1G" # or "500M"
+resourceEphemeralLimit: "1G" # or "500M"

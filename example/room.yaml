@@ -1,0 +1,18 @@
+apiVersion: hub.roboepics.com/v1
+kind: Room
+metadata:
+  name: "name-of-room"
+  namespace: "namespace-of-room"
+spec:
+  id: "id-of-room"
+  problemID: "id-of-problem-of-this-room"
+  director:
+    id: "id-of-director"
+    image: "https://url/to/image"
+  actors:
+  - id: "id-of-this-actor"
+    image: "https://url/to/image"
+    role: "role-of-this-actor"
+  - id: "id-of-this-actor"
+    image: "https://url/to/image"
+    role: "role-of-this-actor"

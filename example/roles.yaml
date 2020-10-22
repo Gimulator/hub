@@ -1,0 +1,48 @@
+director:
+- key:
+    type: "type1"
+    name: "name1"
+    namespace: "namespace1"
+  methods:
+  - get
+  - put
+- key:
+    type: "type2"
+    name: "name2"
+  methods:
+  - get
+  - get-all
+  - delete
+  - delete-all
+  - put
+  - watch
+
+actors:
+  role1:
+  - key:
+      type: "type2"
+      name: "name2"
+    methods:
+    - get
+    - watch
+  - key:
+      type: "type3"
+      name: "name3"
+      namespace: "namespace3"
+    methods:
+    - put
+    - delete
+  role2:
+  - key:
+      type: "type2"
+      name: "name2"
+    methods:
+    - get
+    - watch
+  - key:
+      type: "type3"
+      name: "name3"
+      namespace: "namespace3"
+    methods:
+    - put
+    - delete
