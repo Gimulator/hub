@@ -188,3 +188,40 @@ func (c *Client) SyncService(ctx context.Context, service *corev1.Service, owner
 
 	return syncedService, err
 }
+
+//////////////////////////////////////////////////
+///////////////////////////////////// ConfigMap///
+//////////////////////////////////////////////////
+
+func (c *Client) SyncConfigMap(ctx context.Context, cm *corev1.ConfigMap, owner metav1.Object) (*corev1.ConfigMap, error) {
+	syncedConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cm.Name,
+			Namespace: cm.Namespace,
+		},
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultBackoff,
+		func() error {
+			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedConfigMap, func() error {
+				newcm := cm.DeepCopy()
+				syncedConfigMap.Data = newcm.Data
+				syncedConfigMap.Annotations = newcm.Annotations
+				syncedConfigMap.Labels = newcm.Labels
+				if owner != nil {
+					controllerutil.SetOwnerReference(owner, syncedConfigMap, c.Scheme)
+				}
+				return nil
+			})
+			return err
+		},
+	)
+
+	return syncedConfigMap, err
+}
+
+func (c *Client) GetConfigMap(ctx context.Context, key types.NamespacedName) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{}
+
+	return cm, c.Get(ctx, key, cm)
+}

@@ -26,6 +26,16 @@ func GimulatorContainerName() string {
 	return "gimulator"
 }
 
+// ConfigMap
+
+func CredConfigMapName(id string) string {
+	return "credential-" + id
+}
+
+func RolesConfigMapName(id string) string {
+	return "roles-" + id
+}
+
 // Roles
 func DirectorRoleName() string {
 	return "director"
@@ -81,6 +91,22 @@ func DirectorOutputPVCName(id string) string {
 	return "director-output-pvc-" + id
 }
 
+func RolesVolumeName() string {
+	return "roles-volume"
+}
+
+func RolesVolumeMountPath() string {
+	return "/etc/gimulator"
+}
+
+func CredsVolumeName() string {
+	return "credentials-volume"
+}
+
+func CredsVolumeMountPath() string {
+	return "/etc/gimulator"
+}
+
 // Labels
 func ActorIDLabel() string {
 	return "actorID"
@@ -114,6 +140,10 @@ func PodTypeGimulator() string {
 // S3
 func S3GameConfigBucket() string {
 	return "game-config"
+}
+
+func S3RoleBucket() string {
+	return "roles"
 }
 
 // Cache

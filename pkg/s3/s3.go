@@ -44,3 +44,24 @@ func GetStruct(bucket, name string, i interface{}) error {
 
 	return yaml.Unmarshal(b, i)
 }
+
+func GetBytes(bucket, name string) ([]byte, error) {
+	obj, err := s.GetObject(bucket, name, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	stat, err := obj.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]byte, stat.Size-1)
+	_, err = obj.Read(b)
+	return b, err
+}
+
+func GetString(bucket, name string) (string, error) {
+	bytes, err := GetBytes(bucket, name)
+	return string(bytes), err
+}
