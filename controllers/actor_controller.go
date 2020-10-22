@@ -38,7 +38,11 @@ func (a *actorReconciler) reconcileActor(ctx context.Context, room *hubv1.Room, 
 	}
 
 	logger.Info("starting to create actor's manifest")
-	actorPod := a.actorPodManifest(actor, room)
+	actorPod, err := a.actorPodManifest(actor, room)
+	if err != nil {
+		logger.Error(err, "could not create actor's manifest")
+		return err
+	}
 
 	logger.Info("starting to sync actor's pod")
 	syncedActorPod, err := a.SyncPod(ctx, actorPod, room)
@@ -54,7 +58,7 @@ func (a *actorReconciler) reconcileActor(ctx context.Context, room *hubv1.Room, 
 }
 
 func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.Actor, room *hubv1.Room) error {
-	quantity, err := resource.ParseQuantity(room.Spec.GameConfig.OutputVolumeSize)
+	quantity, err := resource.ParseQuantity(room.Spec.ProblemSettings.OutputVolumeSize)
 	if err != nil {
 		return err
 	}
@@ -70,9 +74,6 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 					corev1.ResourceStorage: quantity,
 				},
 			},
-			//AccessModes: []corev1.PersistentVolumeAccessMode{
-			//	corev1.ReadOnlyMany,
-			//},
 		},
 	}
 
@@ -84,7 +85,7 @@ func (a *actorReconciler) updateActorStatus(room *hubv1.Room, actor *hubv1.Actor
 	room.Status.ActorStatuses[actor.ID] = pod.Status.DeepCopy()
 }
 
-func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room) *corev1.Pod {
+func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room) (*corev1.Pod, error) {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
@@ -102,12 +103,12 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		MountPath: name.OutputVolumeMountPath(),
 	})
 
-	if room.Spec.GameConfig.DataPVCName != "" {
+	if room.Spec.ProblemSettings.DataPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.DataVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.GameConfig.DataPVCName,
+					ClaimName: room.Spec.ProblemSettings.DataPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -125,6 +126,21 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		name.PodTypeLabel(): name.PodTypeActor(),
 	}
 
+	cpu, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceCPULimit)
+	if err != nil {
+		return nil, err
+	}
+
+	memory, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceMemoryLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	ephemeral, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceEphemeralLimit)
+	if err != nil {
+		return nil, err
+	}
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.ActorPodName(actor.ID),
@@ -140,23 +156,33 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 					Image:           actor.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
-					Resources:       corev1.ResourceRequirements{},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GIMULATOR_HOST",
 							Value: fmt.Sprintf("%s:%d", name.GimulatorServiceName(room.Spec.ID), name.GimulatorServicePort()),
 						},
 						{
-							Name:  "ID",
+							Name:  "GIMULATOR_CLIENT_ID",
 							Value: actor.ID,
 						},
 						{
-							Name:  "ROLE",
+							Name:  "GIMULATOR_ROLE",
 							Value: actor.Role,
+						},
+						{
+							Name:  "GIMULATOR_TOKEN",
+							Value: actor.Token,
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:              cpu,
+							corev1.ResourceMemory:           memory,
+							corev1.ResourceEphemeralStorage: ephemeral,
 						},
 					},
 				},
 			},
 		},
-	}
+	}, nil
 }

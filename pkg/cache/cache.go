@@ -18,9 +18,8 @@ func init() {
 	c = cache.New(CacheExpirationTime, CacheCleanupInterval)
 }
 
-func SetStruct(key string, value interface{}) error {
+func SetStruct(key string, value interface{}) {
 	c.SetDefault(key, value)
-	return nil
 }
 
 func GetStruct(key string, value interface{}) error {
@@ -34,4 +33,21 @@ func GetStruct(key string, value interface{}) error {
 	}
 
 	return nil
+}
+
+func SetString(key string, value string) {
+	c.SetDefault(key, value)
+}
+
+func GetString(key string) (string, error) {
+	data, exists := c.Get(key)
+	if !exists {
+		return "", fmt.Errorf("asked key not found")
+	}
+
+	str, ok := data.(string)
+	if !ok {
+		return "", fmt.Errorf("asked key not found")
+	}
+	return str, nil
 }

@@ -7,21 +7,19 @@ import (
 	"github.com/Gimulator/hub/pkg/s3"
 )
 
-func FetchGameConfig(room *hubv1.Room) error {
-	if room.Spec.GameConfig != nil {
+func FetchProblemSettings(room *hubv1.Room) error {
+	if room.Spec.ProblemSettings != nil {
 		return nil
 	}
 
-	if err := cache.GetStruct(name.CacheKeyForGame(room.Spec.ProblemID), room.Spec.GameConfig); err == nil {
+	if err := cache.GetStruct(name.CacheKeyForProblemSettings(room.Spec.ProblemID), room.Spec.ProblemSettings); err == nil {
 		return nil
 	}
 
-	if err := s3.GetStruct(name.S3GameConfigBucket(), room.Spec.ProblemID, room.Spec.GameConfig); err != nil {
+	if err := s3.GetStruct(name.S3ProblemSettingsBucket(), name.S3ProblemSettingsObjectName(room.Spec.ProblemID), room.Spec.ProblemSettings); err != nil {
 		return err
 	}
-
-	// is it OK to ignore error of cache system?
-	_ = cache.SetStruct(name.CacheKeyForGame(room.Spec.ProblemID), room.Spec.GameConfig.DeepCopy())
+	cache.SetStruct(name.CacheKeyForProblemSettings(room.Spec.ProblemID), room.Spec.ProblemSettings.DeepCopy())
 
 	return nil
 }

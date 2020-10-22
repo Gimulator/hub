@@ -6,13 +6,14 @@ import (
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
+	"github.com/Gimulator/hub/pkg/config"
 	"github.com/Gimulator/hub/pkg/name"
-	"github.com/Gimulator/hub/pkg/s3"
 )
 
 // gimulatorReconciler reconciles Gimulator for a Room
@@ -32,7 +33,7 @@ func newGimulatorReconciler(client *client.Client, log logr.Logger) (*gimulatorR
 func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv1.Room) error {
 	logger := g.Log.WithValues("reconciler", "Gimulator", "room", room.Spec.ID)
 
-	if room.Spec.GameConfig.GimulatorImage == "" {
+	if room.Spec.ProblemSettings.GimulatorImage == "" {
 		logger.Info("this game doesn't need gimulator")
 		return nil
 	}
@@ -50,7 +51,11 @@ func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv
 	}
 
 	logger.Info("starting to create gimulator's manifest")
-	gimPod := g.gimulatorPodManifest(room)
+	gimPod, err := g.gimulatorPodManifest(room)
+	if err != nil {
+		logger.Error(err, "could not create gimulator's manifest")
+		return err
+	}
 
 	logger.Info("starting to sync gimulator's pod")
 	syncedGimPod, err := g.SyncPod(ctx, gimPod, room)
@@ -82,7 +87,7 @@ func (g *gimulatorReconciler) reconcileRolesConfigMap(ctx context.Context, room 
 		return nil
 	}
 
-	bytes, err := s3.GetBytes(name.S3RoleBucket(), name.RolesConfigMapName(room.Spec.ProblemID))
+	roles, err := config.FetchRoles(room)
 	if err != nil {
 		return err
 	}
@@ -93,7 +98,7 @@ func (g *gimulatorReconciler) reconcileRolesConfigMap(ctx context.Context, room 
 			Namespace: room.Namespace,
 		},
 		Data: map[string]string{
-			"data": string(bytes),
+			"data": roles,
 		},
 	}
 
@@ -105,15 +110,25 @@ func (g *gimulatorReconciler) reconcileRolesConfigMap(ctx context.Context, room 
 }
 
 func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context, room *hubv1.Room) error {
-	roles := make(map[string]string)
+	type Cred struct {
+		Role  string `yaml:"role"`
+		Token string `yaml:"token"`
+	}
+	creds := make(map[string]Cred)
 
-	roles[room.Spec.Director.ID] = name.DirectorRoleName()
-
-	for _, actor := range room.Spec.Actors {
-		roles[actor.ID] = actor.Role
+	creds[room.Spec.Director.ID] = Cred{
+		Role:  name.DirectorRoleName(),
+		Token: room.Spec.Director.Token,
 	}
 
-	bytes, err := yaml.Marshal(roles)
+	for _, actor := range room.Spec.Actors {
+		creds[actor.ID] = Cred{
+			Role:  actor.Role,
+			Token: actor.Token,
+		}
+	}
+
+	bytes, err := yaml.Marshal(creds)
 	if err != nil {
 		return err
 	}
@@ -158,7 +173,22 @@ func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, roo
 	return err
 }
 
-func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) *corev1.Pod {
+func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Pod, error) {
+	cpu, err := resource.ParseQuantity(name.GimulatorCPULimit())
+	if err != nil {
+		return nil, err
+	}
+
+	memory, err := resource.ParseQuantity(name.GimulatorMemoryLimit())
+	if err != nil {
+		return nil, err
+	}
+
+	ephemeral, err := resource.ParseQuantity(name.GimulatorEphemeralLimit())
+	if err != nil {
+		return nil, err
+	}
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.GimulatorPodName(room.Spec.ID),
@@ -173,9 +203,8 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) *corev1.Pod
 			Containers: []corev1.Container{
 				{
 					Name:            name.GimulatorContainerName(),
-					Image:           room.Spec.GameConfig.GimulatorImage,
+					Image:           room.Spec.ProblemSettings.GimulatorImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Resources:       corev1.ResourceRequirements{},
 					Env:             []corev1.EnvVar{},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -187,6 +216,13 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) *corev1.Pod
 							Name:      name.CredsVolumeName(),
 							MountPath: name.CredsVolumeMountPath(),
 							ReadOnly:  true,
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:              cpu,
+							corev1.ResourceMemory:           memory,
+							corev1.ResourceEphemeralStorage: ephemeral,
 						},
 					},
 				},
@@ -226,7 +262,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) *corev1.Pod
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func (g *gimulatorReconciler) updateGimulatorStatus(room *hubv1.Room, pod *corev1.Pod) {

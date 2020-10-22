@@ -38,7 +38,11 @@ func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.
 	}
 
 	logger.Info("starting to create director's manifest")
-	dirPod := a.directorPodManifest(room)
+	dirPod, err := a.directorPodManifest(room)
+	if err != nil {
+		logger.Error(err, "could not create director's manifest")
+		return err
+	}
 
 	logger.Info("starting to sync director's pod")
 	syncedDirPod, err := a.SyncPod(ctx, dirPod, room)
@@ -54,7 +58,7 @@ func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.
 }
 
 func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1.Room) error {
-	quantity, err := resource.ParseQuantity(room.Spec.GameConfig.OutputVolumeSize)
+	quantity, err := resource.ParseQuantity(room.Spec.ProblemSettings.OutputVolumeSize)
 	if err != nil {
 		return err
 	}
@@ -84,7 +88,7 @@ func (a *directorReconciler) updateDirectorStatus(room *hubv1.Room, pod *corev1.
 	room.Status.DirectorStatus = pod.Status.DeepCopy()
 }
 
-func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
+func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod, error) {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
@@ -102,12 +106,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 		MountPath: name.OutputVolumeMountPath(),
 	})
 
-	if room.Spec.GameConfig.DataPVCName != "" {
+	if room.Spec.ProblemSettings.DataPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.DataVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.GameConfig.DataPVCName,
+					ClaimName: room.Spec.ProblemSettings.DataPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -119,12 +123,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 		})
 	}
 
-	if room.Spec.GameConfig.FactPVCName != "" {
+	if room.Spec.ProblemSettings.FactPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.FactVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.GameConfig.FactPVCName,
+					ClaimName: room.Spec.ProblemSettings.FactPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -159,6 +163,21 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 		name.PodTypeLabel():    name.PodTypeDirector(),
 	}
 
+	cpu, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceCPULimit)
+	if err != nil {
+		return nil, err
+	}
+
+	memory, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceMemoryLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	ephemeral, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceEphemeralLimit)
+	if err != nil {
+		return nil, err
+	}
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.DirectorPodName(room.Spec.Director.ID),
@@ -174,23 +193,33 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 					Image:           room.Spec.Director.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
-					Resources:       corev1.ResourceRequirements{},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GIMULATOR_HOST",
 							Value: fmt.Sprintf("%s:%d", name.GimulatorServiceName(room.Spec.ID), name.GimulatorServicePort()),
 						},
 						{
-							Name:  "ID",
+							Name:  "GIMULATOR_CLIENT_ID",
 							Value: room.Spec.Director.ID,
 						},
 						{
-							Name:  "ROLE",
+							Name:  "GIMULATOR_ROLE",
 							Value: name.DirectorRoleName(),
+						},
+						{
+							Name:  "GIMULATOR_TOKEN",
+							Value: room.Spec.Director.Token,
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:              cpu,
+							corev1.ResourceMemory:           memory,
+							corev1.ResourceEphemeralStorage: ephemeral,
 						},
 					},
 				},
 			},
 		},
-	}
+	}, nil
 }

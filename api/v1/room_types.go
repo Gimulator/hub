@@ -19,11 +19,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type GameConfig struct {
-	DataPVCName      string `json:"dataPVCName,omitempty"`
-	FactPVCName      string `json:"factPVCName,omitempty"`
-	GimulatorImage   string `json:"gimulatorImage,omitempty"`
-	OutputVolumeSize string `json:"outputVolumeSize"`
+type ProblemSettings struct {
+	DataPVCName            string `json:"dataPVCName,omitempty"`
+	FactPVCName            string `json:"factPVCName,omitempty"`
+	GimulatorImage         string `json:"gimulatorImage,omitempty"`
+	OutputVolumeSize       string `json:"outputVolumeSize"`
+	ResourceCPULimit       string `json:"resourceCPULimit"`
+	ResourceMemoryLimit    string `json:"resourceMemoryLimit"`
+	ResourceEphemeralLimit string `json:"resourceEphemeralLimit"`
 }
 
 // Actor defines some actor of a Room
@@ -31,29 +34,23 @@ type Actor struct {
 	ID    string `json:"id"`
 	Image string `json:"image"`
 	Role  string `json:"role"`
-}
-
-// ActorStatus defines the observed state of Actor
-type ActorStatus struct {
+	Token string `json:"token,omitempty"`
 }
 
 // Director defines the director of a Room
 type Director struct {
 	ID    string `json:"id"`
 	Image string `json:"image"`
-}
-
-// DirectorStatus defines the observed state of Director
-type DirectorStatus struct {
+	Token string `json:"token,omitempty"`
 }
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	ID         string      `json:"id"`
-	ProblemID  string      `json:"problemID"`
-	GameConfig *GameConfig `json:"gameConfig,omitempty"`
-	Actors     []Actor     `json:"actors"`
-	Director   Director    `json:"director"`
+	ID              string           `json:"id"`
+	ProblemID       string           `json:"problemID"`
+	ProblemSettings *ProblemSettings `json:"problemSettings,omitempty"`
+	Actors          []Actor          `json:"actors"`
+	Director        Director         `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room

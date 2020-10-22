@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,7 +55,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 		return nil, err
 	}
 
-	actorReconciler, err := newActorReconciler(client, log)
+	gimulatorReconciler, err := newGimulatorReconciler(client, log)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 		return nil, err
 	}
 
-	gimulatorReconciler, err := newGimulatorReconciler(client, log)
+	actorReconciler, err := newActorReconciler(client, log)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger.Info("starting to fetch game configuration")
-	if err := config.FetchGameConfig(room); err != nil {
+	if err := config.FetchProblemSettings(room); err != nil {
 		logger.Error(err, "could not fetch game configuration", "game", room.Spec.ProblemID)
 		return ctrl.Result{}, err
 	}
@@ -137,18 +138,18 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error {
-	if room.Spec.GameConfig.DataPVCName != "" {
+	if room.Spec.ProblemSettings.DataPVCName != "" {
 		key := types.NamespacedName{
-			Name:      room.Spec.GameConfig.DataPVCName,
+			Name:      room.Spec.ProblemSettings.DataPVCName,
 			Namespace: room.Namespace,
 		}
 		if _, err := r.GetPVC(ctx, key); err != nil {
 			return err
 		}
 	}
-	if room.Spec.GameConfig.FactPVCName != "" {
+	if room.Spec.ProblemSettings.FactPVCName != "" {
 		key := types.NamespacedName{
-			Name:      room.Spec.GameConfig.FactPVCName,
+			Name:      room.Spec.ProblemSettings.FactPVCName,
 			Namespace: room.Namespace,
 		}
 		if _, err := r.GetPVC(ctx, key); err != nil {
@@ -160,7 +161,8 @@ func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error 
 }
 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&hubv1.Room{}).
-		Complete(r)
+	builder := ctrl.NewControllerManagedBy(mgr)
+	builder = builder.For(&hubv1.Room{})
+	builder = builder.Owns(&corev1.Pod{})
+	return builder.Complete(r)
 }

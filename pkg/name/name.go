@@ -45,13 +45,25 @@ func MasterRoleName() string {
 	return "master"
 }
 
-// Services
+// Gimulator
 func GimulatorServiceName(roomID string) string {
 	return "gimulator-" + roomID
 }
 
 func GimulatorServicePort() int32 {
 	return 23579
+}
+
+func GimulatorMemoryLimit() string {
+	return "1G"
+}
+
+func GimulatorCPULimit() string {
+	return "1"
+}
+
+func GimulatorEphemeralLimit() string {
+	return "1G"
 }
 
 // Volumes
@@ -80,7 +92,7 @@ func OutputVolumeMountPath() string {
 }
 
 func ActorOutputVolumeMountPathForDirector(id string) string {
-	return "/var/gimulator/" + id
+	return "/actors/output/" + id
 }
 
 func ActorOutputPVCName(id string) string {
@@ -138,15 +150,27 @@ func PodTypeGimulator() string {
 }
 
 // S3
-func S3GameConfigBucket() string {
-	return "game-config"
+func S3ProblemSettingsBucket() string {
+	return "problem-settings"
+}
+
+func S3ProblemSettingsObjectName(id string) string {
+	return id + "-problem-settings.yaml"
 }
 
 func S3RoleBucket() string {
 	return "roles"
 }
 
+func S3RolesObjectName(id string) string {
+	return id + "-roles.yaml"
+}
+
 // Cache
-func CacheKeyForGame(game string) string {
-	return "game-config-" + game
+func CacheKeyForProblemSettings(id string) string {
+	return "problem-settings-" + id
+}
+
+func CacheKeyForRoles(id string) string {
+	return "roles-" + id
 }
