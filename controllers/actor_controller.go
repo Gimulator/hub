@@ -61,7 +61,7 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.OutputPVCName(actor.ID),
+			Name:      name.ActorOutputPVCName(actor.ID),
 			Namespace: room.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -70,9 +70,9 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 					corev1.ResourceStorage: quantity,
 				},
 			},
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadOnlyMany,
-			},
+			//AccessModes: []corev1.PersistentVolumeAccessMode{
+			//	corev1.ReadOnlyMany,
+			//},
 		},
 	}
 
@@ -89,17 +89,17 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
 	volumes = append(volumes, corev1.Volume{
-		Name: name.OutputVolumeName(),
+		Name: name.OutputVolumeName(actor.ID),
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name.OutputPVCName(actor.ID),
+				ClaimName: name.ActorOutputPVCName(actor.ID),
 			},
 		},
 	})
 
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      name.OutputVolumeName(),
-		MountPath: name.OutputVolumeMountDir(),
+		Name:      name.OutputVolumeName(actor.ID),
+		MountPath: name.OutputVolumeMountPath(),
 	})
 
 	if room.Spec.GameConfig.DataPVCName != "" {
@@ -114,7 +114,7 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      name.DataVolumeName(),
-			MountPath: name.DataVolumeMountDir(),
+			MountPath: name.DataVolumeMountPath(),
 			ReadOnly:  true,
 		})
 	}
@@ -145,6 +145,14 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 						{
 							Name:  "GIMULATOR_HOST",
 							Value: fmt.Sprintf("%s:%d", name.GimulatorServiceName(room.Spec.ID), name.GimulatorServicePort()),
+						},
+						{
+							Name:  "ID",
+							Value: actor.ID,
+						},
+						{
+							Name:  "ROLE",
+							Value: actor.Role,
 						},
 					},
 				},

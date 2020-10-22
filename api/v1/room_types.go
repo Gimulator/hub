@@ -20,9 +20,9 @@ import (
 )
 
 type GameConfig struct {
-	DataPVCName      string `json:"dataPVCName"`
-	FactPVCName      string `json:"factPVCName"`
-	GimulatorImage   string `json:"gimulatorImage"`
+	DataPVCName      string `json:"dataPVCName,omitempty"`
+	FactPVCName      string `json:"factPVCName,omitempty"`
+	GimulatorImage   string `json:"gimulatorImage,omitempty"`
 	OutputVolumeSize string `json:"outputVolumeSize"`
 }
 
@@ -30,6 +30,7 @@ type GameConfig struct {
 type Actor struct {
 	ID    string `json:"id"`
 	Image string `json:"image"`
+	Role  string `json:"role"`
 }
 
 // ActorStatus defines the observed state of Actor
@@ -49,7 +50,7 @@ type DirectorStatus struct {
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
 	ID         string      `json:"id"`
-	Game       string      `json:"game"`
+	ProblemID  string      `json:"problemID"`
 	GameConfig *GameConfig `json:"gameConfig,omitempty"`
 	Actors     []Actor     `json:"actors"`
 	Director   Director    `json:"director"`

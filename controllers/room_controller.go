@@ -104,7 +104,7 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	logger.Info("starting to fetch game configuration")
 	if err := config.FetchGameConfig(room); err != nil {
-		logger.Error(err, "could not fetch game configuration", "game", room.Spec.Game)
+		logger.Error(err, "could not fetch game configuration", "game", room.Spec.ProblemID)
 		return ctrl.Result{}, err
 	}
 

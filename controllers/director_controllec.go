@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -60,7 +61,7 @@ func (a *directorReconciler) reconcileOutputPVC(ctx context.Context, room *hubv1
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.OutputPVCName(room.Spec.Director.ID),
+			Name:      name.DirectorOutputPVCName(room.Spec.Director.ID),
 			Namespace: room.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -88,17 +89,17 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
 	volumes = append(volumes, corev1.Volume{
-		Name: name.OutputVolumeName(),
+		Name: name.OutputVolumeName(room.Spec.Director.ID),
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name.OutputPVCName(room.Spec.Director.ID),
+				ClaimName: name.ActorOutputPVCName(room.Spec.Director.ID),
 			},
 		},
 	})
 
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      name.OutputVolumeName(),
-		MountPath: name.OutputVolumeMountDir(),
+		Name:      name.OutputVolumeName(room.Spec.Director.ID),
+		MountPath: name.OutputVolumeMountPath(),
 	})
 
 	if room.Spec.GameConfig.DataPVCName != "" {
@@ -113,7 +114,7 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      name.DataVolumeName(),
-			MountPath: name.DataVolumeMountDir(),
+			MountPath: name.DataVolumeMountPath(),
 			ReadOnly:  true,
 		})
 	}
@@ -130,7 +131,24 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      name.FactVolumeName(),
-			MountPath: name.FactVolumeMountDir(),
+			MountPath: name.FactVolumeMountPath(),
+			ReadOnly:  true,
+		})
+	}
+
+	for _, actor := range room.Spec.Actors {
+		volumes = append(volumes, corev1.Volume{
+			Name: name.OutputVolumeName(actor.ID),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: name.ActorOutputPVCName(actor.ID),
+					ReadOnly:  true,
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      name.OutputVolumeName(actor.ID),
+			MountPath: name.ActorOutputVolumeMountPathForDirector(actor.ID),
 			ReadOnly:  true,
 		})
 	}
@@ -157,7 +175,20 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) *corev1.Pod {
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
 					Resources:       corev1.ResourceRequirements{},
-					Env:             []corev1.EnvVar{},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "GIMULATOR_HOST",
+							Value: fmt.Sprintf("%s:%d", name.GimulatorServiceName(room.Spec.ID), name.GimulatorServicePort()),
+						},
+						{
+							Name:  "ID",
+							Value: room.Spec.Director.ID,
+						},
+						{
+							Name:  "ROLE",
+							Value: name.DirectorRoleName(),
+						},
+					},
 				},
 			},
 		},
