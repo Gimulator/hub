@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
@@ -113,19 +114,22 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 	type Cred struct {
 		Role  string `yaml:"role"`
 		Token string `yaml:"token"`
+		ID    string `yaml:"id"`
 	}
-	creds := make(map[string]Cred)
+	creds := make([]Cred, 0)
 
-	creds[room.Spec.Director.ID] = Cred{
+	creds = append(creds, Cred{
+		ID:    room.Spec.Director.ID,
 		Role:  name.DirectorRoleName(),
 		Token: room.Spec.Director.Token,
-	}
+	})
 
 	for _, actor := range room.Spec.Actors {
-		creds[actor.ID] = Cred{
+		creds = append(creds, Cred{
+			ID:    actor.ID,
 			Role:  actor.Role,
 			Token: actor.Token,
-		}
+		})
 	}
 
 	bytes, err := yaml.Marshal(creds)
@@ -205,7 +209,12 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 					Name:            name.GimulatorContainerName(),
 					Image:           room.Spec.ProblemSettings.GimulatorImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Env:             []corev1.EnvVar{},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "GIMULATOR_PORT",
+							Value: strconv.Itoa(int(name.GimulatorServicePort())),
+						},
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      name.RolesVolumeName(),

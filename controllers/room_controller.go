@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	uuid "github.com/satori/go.uuid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,6 +104,21 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	// tokens should be generated one time in the life-cycle of a room,
+	// so we update room with generated tokens and then for next call of reconcile,
+	// we will do nothing
+	logger.Info("starting to generate tokens if neeeded")
+	if wasGenerated, err := r.generateTokens(room); err != nil {
+		logger.Error(err, "cloud not generate tokens")
+		return ctrl.Result{}, err
+	} else if wasGenerated {
+		logger.Info(("starting to update room after generating tokens"))
+		if room, err = r.SyncRoom(ctx, room); err != nil {
+			logger.Error(err, "could not update room after generating tokens")
+			return ctrl.Result{}, err
+		}
+	}
+
 	logger.Info("starting to fetch game configuration")
 	if err := config.FetchProblemSettings(room); err != nil {
 		logger.Error(err, "could not fetch game configuration", "game", room.Spec.ProblemID)
@@ -135,6 +151,26 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *RoomReconciler) generateTokens(room *hubv1.Room) (bool, error) {
+	flag := false
+
+	if room.Spec.Director.Token == "" {
+		room.Spec.Director.Token = uuid.NewV4().String()
+		flag = true
+	}
+
+	for i := range room.Spec.Actors {
+		actor := &room.Spec.Actors[i]
+
+		if actor.Token == "" {
+			actor.Token = uuid.NewV4().String()
+			flag = true
+		}
+	}
+
+	return flag, nil
 }
 
 func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error {
