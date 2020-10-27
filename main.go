@@ -46,7 +46,7 @@ func init() {
 func main() {
 	namespace := os.Getenv("HUB_NAMESPACE")
 	if namespace == "" {
-		namespace = "hub"
+		namespace = "hub-system"
 	}
 
 	var metricsAddr string
