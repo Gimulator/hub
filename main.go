@@ -44,6 +44,11 @@ func init() {
 }
 
 func main() {
+	namespace := os.Getenv("HUB_NAMESPACE")
+	if namespace == "" {
+		namespace = "hub"
+	}
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
@@ -59,6 +64,7 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "fa842ee4.roboepics.com",
+		Namespace:          namespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

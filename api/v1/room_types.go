@@ -55,8 +55,8 @@ type RoomSpec struct {
 
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
-	GimulatorStatus *corev1.PodStatus            `json:"gimulatorStatus"`
-	DirectorStatus  *corev1.PodStatus            `json:"directorStatus"`
+	GimulatorStatus *corev1.PodStatus           `json:"gimulatorStatus"`
+	DirectorStatus  *corev1.PodStatus           `json:"directorStatus"`
 	ActorStatuses   map[string]corev1.PodStatus `json:"actorStatuses"`
 }
 
