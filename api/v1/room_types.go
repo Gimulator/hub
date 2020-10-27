@@ -57,7 +57,7 @@ type RoomSpec struct {
 type RoomStatus struct {
 	GimulatorStatus *corev1.PodStatus            `json:"gimulatorStatus"`
 	DirectorStatus  *corev1.PodStatus            `json:"directorStatus"`
-	ActorStatuses   map[string]*corev1.PodStatus `json:"actorStatuses"`
+	ActorStatuses   map[string]corev1.PodStatus `json:"actorStatuses"`
 }
 
 // +kubebuilder:object:root=true

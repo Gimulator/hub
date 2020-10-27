@@ -82,7 +82,7 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 }
 
 func (a *actorReconciler) updateActorStatus(room *hubv1.Room, actor *hubv1.Actor, pod *corev1.Pod) {
-	room.Status.ActorStatuses[actor.ID] = pod.Status.DeepCopy()
+	room.Status.ActorStatuses[actor.ID] = *pod.Status.DeepCopy()
 }
 
 func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room) (*corev1.Pod, error) {

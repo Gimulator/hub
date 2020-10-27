@@ -168,17 +168,9 @@ func (in *RoomStatus) DeepCopyInto(out *RoomStatus) {
 	}
 	if in.ActorStatuses != nil {
 		in, out := &in.ActorStatuses, &out.ActorStatuses
-		*out = make(map[string]*corev1.PodStatus, len(*in))
+		*out = make(map[string]corev1.PodStatus, len(*in))
 		for key, val := range *in {
-			var outVal *corev1.PodStatus
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
-				*out = new(corev1.PodStatus)
-				(*in).DeepCopyInto(*out)
-			}
-			(*out)[key] = outVal
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }

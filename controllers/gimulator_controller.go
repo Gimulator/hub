@@ -275,5 +275,5 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 }
 
 func (g *gimulatorReconciler) updateGimulatorStatus(room *hubv1.Room, pod *corev1.Pod) {
-	room.Status.ActorStatuses[name.GimulatorContainerName()] = pod.Status.DeepCopy()
+	room.Status.ActorStatuses[name.GimulatorContainerName()] = *pod.Status.DeepCopy()
 }
