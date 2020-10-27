@@ -95,6 +95,7 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	defer cancle()
 
 	logger := r.Log.WithValues("reconciler", "Room", "room", req.NamespacedName)
+	logger.Info("starting to reconcile room")
 
 	room, err := r.GetRoom(ctx, req.NamespacedName)
 	if errors.IsNotFound(err) {
