@@ -36,4 +36,20 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        env:
+        - name: S3_URL
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3URL
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3AccessKey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credential
+              key: s3SecretKey
       terminationGracePeriodSeconds: 10
