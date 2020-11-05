@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.68.0 // indirect
+	github.com/Gimulator/protobuf v0.0.0-20201104090827-c336a55a30a1
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-ini/ini v1.62.0 // indirect
 	github.com/go-logr/logr v0.2.1
@@ -19,6 +20,8 @@ require (
 	github.com/prometheus/common v0.14.0 // indirect
 	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
+	github.com/sirupsen/logrus v1.6.0
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee // indirect
@@ -28,6 +31,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	gonum.org/v1/netlib v0.0.0-20201012070519-2390d26c3658 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/grpc v1.32.0
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.2
 	k8s.io/apiextensions-apiserver v0.19.2 // indirect

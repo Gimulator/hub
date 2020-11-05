@@ -28,6 +28,8 @@ import (
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/controllers"
+	"github.com/Gimulator/hub/pkg/mq"
+	"github.com/Gimulator/hub/pkg/reporter"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -48,6 +50,10 @@ func main() {
 	if namespace == "" {
 		namespace = "hub-system"
 	}
+
+	rabbitURL := os.Getenv("HUB_RABBIT_URL")
+	rabbitQueue := os.Getenv("HUB_RABBIT_QUEUE")
+	token := os.Getenv("HUB_GIMULATOR_TOKEN")
 
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -71,8 +77,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setting up RabbitMq
+	rabbit, err := mq.NewRabbit(rabbitURL, rabbitQueue)
+	if err != nil {
+		setupLog.Error(err, "unable to create rabbit instance")
+		os.Exit(1)
+	}
+
+	reporter, err := reporter.NewReporter(token, rabbit)
+	if err != nil {
+		setupLog.Error(err, "unable to create reporter instance")
+		os.Exit(1)
+	}
+
 	// Setting up room controller
-	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"))
+	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "room-controller")
 		os.Exit(1)

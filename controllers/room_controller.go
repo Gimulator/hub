@@ -32,6 +32,7 @@ import (
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
 	"github.com/Gimulator/hub/pkg/config"
+	"github.com/Gimulator/hub/pkg/reporter"
 )
 
 var (
@@ -45,12 +46,13 @@ type RoomReconciler struct {
 	*gimulatorReconciler
 	*directorReconciler
 
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	reporter *reporter.Reporter
 }
 
 // NewRoomReconciler returns new instance of RoomReconciler
-func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, error) {
+func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter) (*RoomReconciler, error) {
 	client, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
 	if err != nil {
 		return nil, err
@@ -78,6 +80,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger) (*RoomReconciler, e
 		actorReconciler:     actorReconciler,
 		gimulatorReconciler: gimulatorReconciler,
 		directorReconciler:  directorReconciler,
+		reporter:            reporter,
 	}, nil
 }
 
@@ -143,12 +146,25 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger.Info("starting to reconcile actors")
-	for i := range room.Spec.Actors {
-		actor := &room.Spec.Actors[i]
+	for _, actor := range room.Spec.Actors {
 		if err := r.reconcileActor(ctx, room, actor); err != nil {
 			logger.Error(err, "could not reconcile actor", "actor", actor.ID)
 			return ctrl.Result{}, err
 		}
+	}
+
+	logger.Info("starting to sync room")
+	if _, err := r.SyncRoom(ctx, room); err != nil {
+		logger.Error(err, "could  not sync room")
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("starting to reconcile statuses")
+	if shouldDelete, err := r.reporter.Report(ctx, room); err != nil {
+		logger.Error(err, "could not reconcile statuses")
+		return ctrl.Result{}, err
+	} else if shouldDelete {
+		return ctrl.Result{}, r.DeleteRoom(ctx, room)
 	}
 
 	return ctrl.Result{}, nil
@@ -162,9 +178,7 @@ func (r *RoomReconciler) generateTokens(room *hubv1.Room) (bool, error) {
 		flag = true
 	}
 
-	for i := range room.Spec.Actors {
-		actor := &room.Spec.Actors[i]
-
+	for _, actor := range room.Spec.Actors {
 		if actor.Token == "" {
 			actor.Token = uuid.NewV4().String()
 			flag = true

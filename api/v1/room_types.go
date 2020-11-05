@@ -49,8 +49,8 @@ type RoomSpec struct {
 	ID              string           `json:"id"`
 	ProblemID       string           `json:"problemID"`
 	ProblemSettings *ProblemSettings `json:"problemSettings,omitempty"`
-	Actors          []Actor          `json:"actors"`
-	Director        Director         `json:"director"`
+	Actors          []*Actor         `json:"actors"`
+	Director        *Director        `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room

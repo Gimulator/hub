@@ -34,10 +34,10 @@ func newGimulatorReconciler(client *client.Client, log logr.Logger) (*gimulatorR
 func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv1.Room) error {
 	logger := g.Log.WithValues("reconciler", "Gimulator", "room", room.Spec.ID)
 
-	if room.Spec.ProblemSettings.GimulatorImage == "" {
-		logger.Info("this game doesn't need gimulator")
-		return nil
-	}
+	// if room.Spec.ProblemSettings.GimulatorImage == "" {
+	// 	logger.Info("this game doesn't need gimulator")
+	// 	return nil
+	// }
 
 	logger.Info("starting to reconcile rolse config map")
 	if err := g.reconcileRolesConfigMap(ctx, room); err != nil {
