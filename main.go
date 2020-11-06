@@ -51,7 +51,9 @@ func main() {
 		namespace = "hub-system"
 	}
 
-	rabbitURL := os.Getenv("HUB_RABBIT_URL")
+	rabbitHost := os.Getenv("HUB_RABBIT_HOST")
+	rabbitUsername := os.Getenv("HUB_RABBIT_USERNAME")
+	rabbitPassword := os.Getenv("HUB_RABBIT_Password")
 	rabbitQueue := os.Getenv("HUB_RABBIT_QUEUE")
 	token := os.Getenv("HUB_GIMULATOR_TOKEN")
 
@@ -78,7 +80,7 @@ func main() {
 	}
 
 	// Setting up RabbitMq
-	rabbit, err := mq.NewRabbit(rabbitURL, rabbitQueue)
+	rabbit, err := mq.NewRabbit(rabbitHost, rabbitUsername, rabbitPassword, rabbitQueue)
 	if err != nil {
 		setupLog.Error(err, "unable to create rabbit instance")
 		os.Exit(1)

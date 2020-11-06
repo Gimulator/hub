@@ -198,15 +198,15 @@ func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error 
 			return err
 		}
 	}
-	if room.Spec.ProblemSettings.FactPVCName != "" {
-		key := types.NamespacedName{
-			Name:      room.Spec.ProblemSettings.FactPVCName,
-			Namespace: room.Namespace,
-		}
-		if _, err := r.GetPVC(ctx, key); err != nil {
-			return err
-		}
-	}
+	// if room.Spec.ProblemSettings.FactPVCName != "" {
+	// 	key := types.NamespacedName{
+	// 		Name:      room.Spec.ProblemSettings.FactPVCName,
+	// 		Namespace: room.Namespace,
+	// 	}
+	// 	if _, err := r.GetPVC(ctx, key); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }

@@ -77,7 +77,7 @@ func (r *Reporter) kubeToAPIStatus(phase corev1.PodPhase) api.Status {
 }
 
 func (r *Reporter) informGimulator(context context.Context, room *hubv1.Room, reports []*api.Report) error {
-	address := name.GimulatorServiceName(room.Spec.ID) + ":" + strconv.Itoa(int(name.GimulatorServicePort()))
+	address := name.GimulatorServiceName(room.Spec.ID) + ":" + strconv.Itoa(name.GimulatorServicePort())
 
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {

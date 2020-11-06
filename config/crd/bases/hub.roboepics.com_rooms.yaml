@@ -73,8 +73,6 @@ spec:
               properties:
                 dataPVCName:
                   type: string
-                factPVCName:
-                  type: string
                 gimulatorImage:
                   type: string
                 outputVolumeSize:
@@ -86,6 +84,7 @@ spec:
                 resourceMemoryLimit:
                   type: string
               required:
+              - gimulatorImage
               - outputVolumeSize
               - resourceCPULimit
               - resourceEphemeralLimit

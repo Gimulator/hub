@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +64,7 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.ActorOutputPVCName(actor.ID),
+			Name:      name.OutputPVCName(actor.ID),
 			Namespace: room.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -93,7 +92,7 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		Name: name.OutputVolumeName(actor.ID),
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name.ActorOutputPVCName(actor.ID),
+				ClaimName: name.OutputPVCName(actor.ID),
 			},
 		},
 	})
@@ -121,9 +120,11 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 	}
 
 	labels := map[string]string{
-		name.ActorIDLabel(): actor.ID,
-		name.RoomIDLabel():  room.Spec.ID,
-		name.PodTypeLabel(): name.PodTypeActor(),
+		name.CharacterLabel(): name.CharacterActor(),
+		name.RoleLabel():      actor.Role,
+		name.RoomLabel():      room.Spec.ID,
+		name.ProblemLabel():   room.Spec.ProblemID,
+		name.IDLabel():        actor.ID,
 	}
 
 	cpu, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceCPULimit)
@@ -159,11 +160,11 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GIMULATOR_HOST",
-							Value: fmt.Sprintf("%s:%d", name.GimulatorServiceName(room.Spec.ID), name.GimulatorServicePort()),
+							Value: name.GimulatorHost(room.Spec.ID),
 						},
 						{
-							Name:  "GIMULATOR_CLIENT_ID",
-							Value: actor.ID,
+							Name:  "GIMULATOR_CHARACTER",
+							Value: name.CharacterActor(),
 						},
 						{
 							Name:  "GIMULATOR_ROLE",
@@ -172,6 +173,10 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 						{
 							Name:  "GIMULATOR_TOKEN",
 							Value: actor.Token,
+						},
+						{
+							Name:  "GIMULATOR_Name",
+							Value: actor.ID,
 						},
 					},
 					Resources: corev1.ResourceRequirements{

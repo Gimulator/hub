@@ -21,8 +21,7 @@ import (
 
 type ProblemSettings struct {
 	DataPVCName            string `json:"dataPVCName,omitempty"`
-	FactPVCName            string `json:"factPVCName,omitempty"`
-	GimulatorImage         string `json:"gimulatorImage,omitempty"`
+	GimulatorImage         string `json:"gimulatorImage"`
 	OutputVolumeSize       string `json:"outputVolumeSize"`
 	ResourceCPULimit       string `json:"resourceCPULimit"`
 	ResourceMemoryLimit    string `json:"resourceMemoryLimit"`

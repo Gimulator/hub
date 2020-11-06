@@ -1,5 +1,11 @@
 package name
 
+import (
+	"fmt"
+
+	"github.com/Gimulator/protobuf/go/api"
+)
+
 // Pods
 func ActorPodName(id string) string {
 	return "actor-" + id
@@ -15,15 +21,19 @@ func GimulatorPodName(roomID string) string {
 
 // Containers
 func ActorContainerName() string {
-	return "actor"
+	return CharacterActor()
 }
 
 func DirectorContainerName() string {
-	return "director"
+	return CharacterDirector()
+}
+
+func MasterContainerName() string {
+	return CharacterMaster()
 }
 
 func GimulatorContainerName() string {
-	return "gimulator"
+	return CharacterGimulator()
 }
 
 // ConfigMap
@@ -36,21 +46,16 @@ func RolesConfigMapName(id string) string {
 	return "roles-" + id
 }
 
-// Roles
-func DirectorRoleName() string {
-	return "director"
-}
-
-func MasterRoleName() string {
-	return "master"
-}
-
 // Gimulator
 func GimulatorServiceName(roomID string) string {
 	return "gimulator-" + roomID
 }
 
-func GimulatorServicePort() int32 {
+func GimulatorConfigDir() string {
+	return "/etc/gimulator"
+}
+
+func GimulatorServicePort() int {
 	return 23579
 }
 
@@ -64,6 +69,10 @@ func GimulatorCPULimit() string {
 
 func GimulatorEphemeralLimit() string {
 	return "1G"
+}
+
+func GimulatorHost(roomID string) string {
+	return fmt.Sprintf("%s:%d", GimulatorServiceName(roomID), GimulatorServicePort())
 }
 
 // Volumes
@@ -91,61 +100,65 @@ func OutputVolumeMountPath() string {
 	return "/output"
 }
 
-func ActorOutputVolumeMountPathForDirector(id string) string {
-	return "/actors/output/" + id
-}
-
-func ActorOutputPVCName(id string) string {
-	return "actor-output-pvc-" + id
-}
-
-func DirectorOutputPVCName(id string) string {
-	return "director-output-pvc-" + id
-}
-
-func RolesVolumeName() string {
+func GimulatorRulesVolumeName() string {
 	return "roles-volume"
 }
 
-func RolesVolumeMountPath() string {
-	return "/etc/gimulator"
+func GimulatorRulesVolumeMountPath() string {
+	return GimulatorConfigDir()
 }
 
-func CredsVolumeName() string {
+func GimulatorCredsVolumeName() string {
 	return "credentials-volume"
 }
 
-func CredsVolumeMountPath() string {
-	return "/etc/gimulator"
+func GimulatorCredsVolumeMountPath() string {
+	return GimulatorConfigDir()
+}
+
+func ActorOutputVolumeMountPathForDirector(id string) string {
+	return "/actors/" + id
+}
+
+func OutputPVCName(id string) string {
+	return "output-pvc-" + id
 }
 
 // Labels
-func ActorIDLabel() string {
-	return "actorID"
+func CharacterLabel() string {
+	return "character"
 }
 
-func DirectorIDLabel() string {
-	return "directorID"
+func RoleLabel() string {
+	return "role"
 }
 
-func RoomIDLabel() string {
-	return "roomID"
+func RoomLabel() string {
+	return "room"
 }
 
-func PodTypeLabel() string {
-	return "podType"
+func ProblemLabel() string {
+	return "problem"
 }
 
-// Pod Types
-func PodTypeActor() string {
-	return "actor"
+func IDLabel() string {
+	return "id"
 }
 
-func PodTypeDirector() string {
-	return "director"
+// character
+func CharacterActor() string {
+	return api.Character_name[int32(api.Character_actor)]
 }
 
-func PodTypeGimulator() string {
+func CharacterDirector() string {
+	return api.Character_name[int32(api.Character_director)]
+}
+
+func CharacterMaster() string {
+	return api.Character_name[int32(api.Character_master)]
+}
+
+func CharacterGimulator() string {
 	return "gimulator"
 }
 
@@ -158,11 +171,11 @@ func S3ProblemSettingsObjectName(id string) string {
 	return id + "-problem-settings.yaml"
 }
 
-func S3RoleBucket() string {
+func S3RulesBucket() string {
 	return "roles"
 }
 
-func S3RolesObjectName(id string) string {
+func S3RulesObjectName(id string) string {
 	return id + "-roles.yaml"
 }
 
@@ -171,6 +184,6 @@ func CacheKeyForProblemSettings(id string) string {
 	return "problem-settings-" + id
 }
 
-func CacheKeyForRoles(id string) string {
-	return "roles-" + id
+func CacheKeyForRules(id string) string {
+	return "rules-" + id
 }
