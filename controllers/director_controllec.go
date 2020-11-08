@@ -28,7 +28,7 @@ func newDirectorReconciler(client *client.Client, log logr.Logger) (*directorRec
 }
 
 func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.Room) error {
-	logger := a.Log.WithValues("reconciler", "Director", "director", room.Spec.Director.ID, "room", room.Spec.ID)
+	logger := a.Log.WithValues("reconciler", "Director", "director", room.Spec.Director.Name, "room", room.Spec.ID)
 
 	// logger.Info("starting to reconcile director's output PVC")
 	// if err := a.reconcileOutputPVC(ctx, room); err != nil {
@@ -83,10 +83,6 @@ func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.
 // 	return err
 // }
 
-func (a *directorReconciler) updateDirectorStatus(room *hubv1.Room, pod *corev1.Pod) {
-	room.Status.DirectorStatus = pod.Status.DeepCopy()
-}
-
 func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod, error) {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
@@ -105,12 +101,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 	// 	MountPath: name.OutputVolumeMountPath(),
 	// })
 
-	if room.Spec.ProblemSettings.DataPVCName != "" {
+	if room.Spec.Setting.DataPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.DataVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.ProblemSettings.DataPVCName,
+					ClaimName: room.Spec.Setting.DataPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -141,17 +137,17 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 
 	for _, actor := range room.Spec.Actors {
 		volumes = append(volumes, corev1.Volume{
-			Name: name.OutputVolumeName(actor.ID),
+			Name: name.OutputVolumeName(actor.Name),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: name.OutputPVCName(actor.ID),
+					ClaimName: name.OutputPVCName(actor.Name),
 					ReadOnly:  true,
 				},
 			},
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      name.OutputVolumeName(actor.ID),
-			MountPath: name.ActorOutputVolumeMountPathForDirector(actor.ID),
+			Name:      name.OutputVolumeName(actor.Name),
+			MountPath: name.ActorOutputVolumeMountPathForDirector(actor.Name),
 			ReadOnly:  true,
 		})
 	}
@@ -161,33 +157,38 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 		name.RoleLabel():      name.CharacterDirector(),
 		name.RoomLabel():      room.Spec.ID,
 		name.ProblemLabel():   room.Spec.ProblemID,
-		name.IDLabel():        room.Spec.Director.ID,
+		name.IDLabel():        room.Spec.Director.Name,
 	}
 
-	cpu, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceCPULimit)
+	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
 	if err != nil {
 		return nil, err
 	}
 
-	memory, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceMemoryLimit)
+	memory, err := resource.ParseQuantity(room.Spec.Setting.ResourceMemoryLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	ephemeral, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceEphemeralLimit)
+	ephemeral, err := resource.ParseQuantity(room.Spec.Setting.ResourceEphemeralLimit)
 	if err != nil {
 		return nil, err
 	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.DirectorPodName(room.Spec.Director.ID),
+			Name:      name.DirectorPodName(room.Spec.Director.Name),
 			Namespace: room.Namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{
 			Volumes:       volumes,
 			RestartPolicy: corev1.RestartPolicyNever,
+			ImagePullSecrets: []corev1.LocalObjectReference{
+				{
+					Name: "registry-credentials",
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            name.DirectorContainerName(),
@@ -212,8 +213,8 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 							Value: room.Spec.Director.Token,
 						},
 						{
-							Name:  "GIMULATOR_Name",
-							Value: room.Spec.Director.ID,
+							Name:  "GIMULATOR_NAME",
+							Value: room.Spec.Director.Name,
 						},
 					},
 					Resources: corev1.ResourceRequirements{
@@ -227,4 +228,10 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 			},
 		},
 	}, nil
+}
+
+func (a *directorReconciler) updateDirectorStatus(room *hubv1.Room, pod *corev1.Pod) {
+	phase := pod.Status.DeepCopy().Phase
+
+	room.Status.DirectorStatus = phase
 }

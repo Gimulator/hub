@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"sync"
+	"reflect"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,8 +20,6 @@ type Client struct {
 	client.Client
 
 	Scheme *runtime.Scheme
-
-	roomM sync.Mutex
 }
 
 // NewClient returns new instance of Client
@@ -38,9 +36,6 @@ func NewClient(c client.Client, scheme *runtime.Scheme) (*Client, error) {
 
 // SyncRoom takes a Room object and updates it or creates it if not exists
 func (c *Client) SyncRoom(ctx context.Context, room *hubv1.Room) (*hubv1.Room, error) {
-	c.roomM.Lock()
-	defer c.roomM.Unlock()
-
 	syncedRoom := &hubv1.Room{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      room.Name,
@@ -52,6 +47,7 @@ func (c *Client) SyncRoom(ctx context.Context, room *hubv1.Room) (*hubv1.Room, e
 		func() error {
 			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedRoom, func() error {
 				syncedRoom.Status = *room.Status.DeepCopy()
+				syncedRoom.Spec = *room.Spec.DeepCopy()
 				return nil
 			})
 			return err
@@ -82,27 +78,38 @@ func (c *Client) DeleteRoom(ctx context.Context, room *hubv1.Room) error {
 
 // SyncPod takes a Pod object and updates it or creates it if not exists
 func (c *Client) SyncPod(ctx context.Context, pod *corev1.Pod, owner metav1.Object) (*corev1.Pod, error) {
-	syncedPod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-		},
+	key := types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}
+
+	syncedPod, err := c.GetPod(ctx, key)
+	if errors.IsNotFound(err) {
+		syncedPod, err = c.CreatePod(ctx, pod, owner)
+		if err != nil {
+			return nil, err
+		}
+		return syncedPod, err
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	err := retry.RetryOnConflict(retry.DefaultBackoff,
-		func() error {
-			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedPod, func() error {
-				syncedPod.Annotations = pod.Annotations
-				syncedPod.Labels = pod.Labels
-				syncedPod.Spec = pod.Spec
-				controllerutil.SetOwnerReference(owner, syncedPod, c.Scheme)
-				return nil
-			})
-			return err
-		},
-	)
+	if !reflect.DeepEqual(pod.Annotations, syncedPod.Annotations) || !reflect.DeepEqual(pod.Labels, syncedPod.Labels) {
+		syncedPod.Annotations = pod.DeepCopy().Annotations
+		syncedPod.Labels = pod.DeepCopy().Labels
 
-	return syncedPod, err
+		if owner != nil {
+			if err := controllerutil.SetOwnerReference(owner, syncedPod, c.Scheme); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := c.Update(ctx, syncedPod); err != nil {
+			return nil, err
+		}
+
+		return syncedPod, nil
+	}
+
+	return syncedPod, nil
 }
 
 // GetPod takes a NamespacedName key and returns a Pod object if exists
@@ -110,6 +117,19 @@ func (c *Client) GetPod(ctx context.Context, key types.NamespacedName) (*corev1.
 	pod := &corev1.Pod{}
 
 	return pod, c.Get(ctx, key, pod)
+}
+
+func (c *Client) CreatePod(ctx context.Context, pod *corev1.Pod, owner metav1.Object) (*corev1.Pod, error) {
+	syncedPod := pod.DeepCopy()
+
+	if owner != nil {
+		if err := controllerutil.SetOwnerReference(owner, syncedPod, c.Scheme); err != nil {
+			return nil, err
+		}
+	}
+
+	err := c.Create(ctx, syncedPod)
+	return syncedPod, err
 }
 
 // DeletePod deletes a Pod object
@@ -126,25 +146,14 @@ func (c *Client) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 
 // SyncPVC takes a PVC object and updates it or creates it if not exists
 func (c *Client) SyncPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim, owner metav1.Object) (*corev1.PersistentVolumeClaim, error) {
-	syncedPVC := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvc.Name,
-			Namespace: pvc.Namespace,
-		},
+	key := types.NamespacedName{Name: pvc.Name, Namespace: pvc.Namespace}
+
+	syncedPVC, err := c.GetPVC(ctx, key)
+	if err != nil && errors.IsNotFound(err) {
+		syncedPVC, err = c.CreatePVC(ctx, pvc, owner)
+		return syncedPVC, err
 	}
-
-	err := retry.RetryOnConflict(retry.DefaultBackoff,
-		func() error {
-			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedPVC, func() error {
-				syncedPVC.Spec = *pvc.Spec.DeepCopy()
-				controllerutil.SetOwnerReference(owner, syncedPVC, c.Scheme)
-				return nil
-			})
-			return err
-		},
-	)
-
-	return syncedPVC, err
+	return syncedPVC, nil
 }
 
 // GetPVC takes a NamespacedName key and returns a PVC object if exists
@@ -152,6 +161,19 @@ func (c *Client) GetPVC(ctx context.Context, key types.NamespacedName) (*corev1.
 	pvc := &corev1.PersistentVolumeClaim{}
 
 	return pvc, c.Get(ctx, key, pvc)
+}
+
+func (c *Client) CreatePVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim, owner metav1.Object) (*corev1.PersistentVolumeClaim, error) {
+	syncedPVC := pvc.DeepCopy()
+
+	if owner != nil {
+		if err := controllerutil.SetOwnerReference(owner, syncedPVC, c.Scheme); err != nil {
+			return nil, err
+		}
+	}
+
+	err := c.Create(ctx, syncedPVC)
+	return syncedPVC, err
 }
 
 // DeletePVC deletes a PVC object
@@ -168,24 +190,37 @@ func (c *Client) DeletePVC(ctx context.Context, pvc *corev1.PersistentVolumeClai
 
 // SyncService takes a Service object and updates it or creates it if not exists
 func (c *Client) SyncService(ctx context.Context, service *corev1.Service, owner metav1.Object) (*corev1.Service, error) {
-	syncedService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      service.Name,
-			Namespace: service.Namespace,
-		},
+	syncedService := &corev1.Service{}
+	err := c.Get(ctx, types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, syncedService)
+	if errors.IsNotFound(err) {
+		syncedService, err = c.CreateService(ctx, service, owner)
+		return syncedService, err
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	err := retry.RetryOnConflict(retry.DefaultBackoff,
-		func() error {
-			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedService, func() error {
-				syncedService.Spec = *service.Spec.DeepCopy()
-				controllerutil.SetOwnerReference(owner, syncedService, c.Scheme)
-				return nil
-			})
-			return err
-		},
-	)
+	if !reflect.DeepEqual(service.Spec.Ports, syncedService.Spec.Ports) || !reflect.DeepEqual(service.Spec.Selector, syncedService.Spec.Selector) {
+		if err := c.Delete(ctx, syncedService); err != nil {
+			return nil, err
+		}
 
+		syncedService, err = c.CreateService(ctx, service, owner)
+		return syncedService, nil
+	}
+	return syncedService, nil
+}
+
+func (c *Client) CreateService(ctx context.Context, service *corev1.Service, owner metav1.Object) (*corev1.Service, error) {
+	syncedService := service.DeepCopy()
+
+	if owner != nil {
+		if err := controllerutil.SetOwnerReference(owner, syncedService, c.Scheme); err != nil {
+			return nil, err
+		}
+	}
+
+	err := c.Create(ctx, syncedService)
 	return syncedService, err
 }
 
@@ -194,34 +229,48 @@ func (c *Client) SyncService(ctx context.Context, service *corev1.Service, owner
 //////////////////////////////////////////////////
 
 func (c *Client) SyncConfigMap(ctx context.Context, cm *corev1.ConfigMap, owner metav1.Object) (*corev1.ConfigMap, error) {
-	syncedConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cm.Name,
-			Namespace: cm.Namespace,
-		},
+	key := types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}
+
+	syncedCM, err := c.GetConfigMap(ctx, key)
+	if errors.IsNotFound(err) {
+		syncedCM, err = c.CreateConfigMap(ctx, cm, owner)
+		return syncedCM, err
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	err := retry.RetryOnConflict(retry.DefaultBackoff,
-		func() error {
-			_, err := controllerutil.CreateOrUpdate(ctx, c.Client, syncedConfigMap, func() error {
-				newcm := cm.DeepCopy()
-				syncedConfigMap.Data = newcm.Data
-				syncedConfigMap.Annotations = newcm.Annotations
-				syncedConfigMap.Labels = newcm.Labels
-				if owner != nil {
-					controllerutil.SetOwnerReference(owner, syncedConfigMap, c.Scheme)
-				}
-				return nil
-			})
-			return err
-		},
-	)
+	if !reflect.DeepEqual(cm.Data, syncedCM.Data) {
+		syncedCM = cm.DeepCopy()
 
-	return syncedConfigMap, err
+		if owner != nil {
+			if err := controllerutil.SetOwnerReference(owner, syncedCM, c.Scheme); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := c.Update(ctx, syncedCM); err != nil {
+			return nil, err
+		}
+	}
+	return syncedCM, nil
 }
 
 func (c *Client) GetConfigMap(ctx context.Context, key types.NamespacedName) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
 
 	return cm, c.Get(ctx, key, cm)
+}
+
+func (c *Client) CreateConfigMap(ctx context.Context, cm *corev1.ConfigMap, owner metav1.Object) (*corev1.ConfigMap, error) {
+	syncedConfigMap := cm.DeepCopy()
+
+	if owner != nil {
+		if err := controllerutil.SetOwnerReference(owner, syncedConfigMap, c.Scheme); err != nil {
+			return nil, err
+		}
+	}
+
+	err := c.Create(ctx, syncedConfigMap)
+	return syncedConfigMap, err
 }

@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	ReconcilationTimeout = time.Second * 10
+	ReconcilationTimeout = time.Second * 20
 )
 
 // RoomReconciler reconciles a Room object
@@ -103,6 +103,7 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	room, err := r.GetRoom(ctx, req.NamespacedName)
 	if errors.IsNotFound(err) {
 		logger.Info("room does not exist")
+		return ctrl.Result{}, nil
 	} else if err != nil {
 		logger.Error(err, "could not get room object")
 		return ctrl.Result{}, err
@@ -117,15 +118,23 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	} else if wasGenerated {
 		logger.Info(("starting to update room after generating tokens"))
+
+		room.Status.DirectorStatus = corev1.PodUnknown
+		room.Status.GimulatorStatus = corev1.PodUnknown
+		room.Status.ActorStatuses = make(map[string]corev1.PodPhase)
+		for _, actor := range room.Spec.Actors {
+			room.Status.ActorStatuses[actor.Name] = corev1.PodUnknown
+		}
+
 		if room, err = r.SyncRoom(ctx, room); err != nil {
 			logger.Error(err, "could not update room after generating tokens")
 			return ctrl.Result{}, err
 		}
 	}
 
-	logger.Info("starting to fetch game configuration")
-	if err := config.FetchProblemSettings(room); err != nil {
-		logger.Error(err, "could not fetch game configuration", "game", room.Spec.ProblemID)
+	logger.Info("starting to fetch setting")
+	if err := config.FetchSetting(room); err != nil {
+		logger.Error(err, "could not fetch setting", "problem", room.Spec.ProblemID)
 		return ctrl.Result{}, err
 	}
 
@@ -138,17 +147,19 @@ func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	logger.Info("starting to reconcile Gimulator")
 	if err := r.reconcileGimulator(ctx, room); err != nil {
 		logger.Error(err, "could not reconcile gimulator")
+		return ctrl.Result{}, err
 	}
 
 	logger.Info("starting to reconcile director")
 	if err := r.reconcileDirector(ctx, room); err != nil {
 		logger.Error(err, "could not reconcile director")
+		return ctrl.Result{}, err
 	}
 
 	logger.Info("starting to reconcile actors")
 	for _, actor := range room.Spec.Actors {
 		if err := r.reconcileActor(ctx, room, actor); err != nil {
-			logger.Error(err, "could not reconcile actor", "actor", actor.ID)
+			logger.Error(err, "could not reconcile actor", "actor", actor.Name)
 			return ctrl.Result{}, err
 		}
 	}
@@ -189,9 +200,9 @@ func (r *RoomReconciler) generateTokens(room *hubv1.Room) (bool, error) {
 }
 
 func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error {
-	if room.Spec.ProblemSettings.DataPVCName != "" {
+	if room.Spec.Setting.DataPVCName != "" {
 		key := types.NamespacedName{
-			Name:      room.Spec.ProblemSettings.DataPVCName,
+			Name:      room.Spec.Setting.DataPVCName,
 			Namespace: room.Namespace,
 		}
 		if _, err := r.GetPVC(ctx, key); err != nil {

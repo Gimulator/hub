@@ -7,19 +7,22 @@ import (
 	"github.com/Gimulator/hub/pkg/s3"
 )
 
-func FetchProblemSettings(room *hubv1.Room) error {
-	if room.Spec.ProblemSettings != nil {
+func FetchSetting(room *hubv1.Room) error {
+	if room.Spec.Setting != nil {
 		return nil
 	}
 
-	if err := cache.GetStruct(name.CacheKeyForProblemSettings(room.Spec.ProblemID), room.Spec.ProblemSettings); err == nil {
+	if err := cache.GetStruct(name.CacheKeyForSetting(room.Spec.ProblemID), room.Spec.Setting); err == nil {
 		return nil
 	}
 
-	if err := s3.GetStruct(name.S3ProblemSettingsBucket(), name.S3ProblemSettingsObjectName(room.Spec.ProblemID), room.Spec.ProblemSettings); err != nil {
+	setting := &hubv1.Setting{}
+	if err := s3.GetStruct(name.S3SettingBucket(), name.S3SettingObjectName(room.Spec.ProblemID), setting); err != nil {
 		return err
 	}
-	cache.SetStruct(name.CacheKeyForProblemSettings(room.Spec.ProblemID), room.Spec.ProblemSettings.DeepCopy())
+	room.Spec.Setting = setting
+
+	cache.SetStruct(name.CacheKeyForSetting(room.Spec.ProblemID), room.Spec.Setting.DeepCopy())
 
 	return nil
 }

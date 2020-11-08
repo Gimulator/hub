@@ -19,18 +19,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ProblemSettings struct {
-	DataPVCName            string `json:"dataPVCName,omitempty"`
-	GimulatorImage         string `json:"gimulatorImage"`
-	OutputVolumeSize       string `json:"outputVolumeSize"`
-	ResourceCPULimit       string `json:"resourceCPULimit"`
-	ResourceMemoryLimit    string `json:"resourceMemoryLimit"`
-	ResourceEphemeralLimit string `json:"resourceEphemeralLimit"`
+type Setting struct {
+	DataPVCName            string `json:"dataPVCName,omitempty" yaml:"dataPVCName,omitempty"`
+	GimulatorImage         string `json:"gimulatorImage" yaml:"gimulatorImage"`
+	OutputVolumeSize       string `json:"outputVolumeSize" yaml:"outputVolumeSize"`
+	ResourceCPULimit       string `json:"resourceCPULimit" yaml:"resourceCPULimit"`
+	ResourceMemoryLimit    string `json:"resourceMemoryLimit" yaml:"resourceMemoryLimit"`
+	ResourceEphemeralLimit string `json:"resourceEphemeralLimit" yaml:"resourceEphemeralLimit"`
+	StorageClass           string `json:"storageClass" yaml:"storageClass"`
 }
 
 // Actor defines some actor of a Room
 type Actor struct {
-	ID    string `json:"id"`
+	Name  string `json:"name"`
 	Image string `json:"image"`
 	Role  string `json:"role"`
 	Token string `json:"token,omitempty"`
@@ -38,25 +39,25 @@ type Actor struct {
 
 // Director defines the director of a Room
 type Director struct {
-	ID    string `json:"id"`
+	Name  string `json:"name"`
 	Image string `json:"image"`
 	Token string `json:"token,omitempty"`
 }
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	ID              string           `json:"id"`
-	ProblemID       string           `json:"problemID"`
-	ProblemSettings *ProblemSettings `json:"problemSettings,omitempty"`
-	Actors          []*Actor         `json:"actors"`
-	Director        *Director        `json:"director"`
+	ID        string    `json:"id"`
+	ProblemID string    `json:"problemID"`
+	Setting   *Setting  `json:"setting,omitempty"`
+	Actors    []*Actor  `json:"actors"`
+	Director  *Director `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room
 type RoomStatus struct {
-	GimulatorStatus *corev1.PodStatus           `json:"gimulatorStatus"`
-	DirectorStatus  *corev1.PodStatus           `json:"directorStatus"`
-	ActorStatuses   map[string]corev1.PodStatus `json:"actorStatuses"`
+	GimulatorStatus corev1.PodPhase            `json:"gimulatorStatus"`
+	DirectorStatus  corev1.PodPhase            `json:"directorStatus"`
+	ActorStatuses   map[string]corev1.PodPhase `json:"actorStatuses"`
 }
 
 // +kubebuilder:object:root=true

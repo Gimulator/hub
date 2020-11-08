@@ -29,7 +29,7 @@ func NewReporter(token string, rabbit *mq.Rabbit) (*Reporter, error) {
 func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 	reports := r.prepareReports(room)
 
-	switch room.Status.GimulatorStatus.Phase {
+	switch room.Status.GimulatorStatus {
 	case corev1.PodSucceeded:
 		return true, nil
 	case corev1.PodRunning:
@@ -41,7 +41,8 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		}
 		return true, nil
 	default:
-		return false, fmt.Errorf("gimulator is not still ready, status-of-gimulator = %v", room.Status.GimulatorStatus.Phase)
+		// Gimulator is not still ready, We will inform it in the next call of reconciler
+		return false, nil
 	}
 }
 
@@ -49,14 +50,14 @@ func (r *Reporter) prepareReports(room *hubv1.Room) []*api.Report {
 	reports := make([]*api.Report, 0)
 
 	reports = append(reports, &api.Report{
-		Name:   room.Spec.Director.ID,
-		Status: r.kubeToAPIStatus(room.Status.DirectorStatus.Phase),
+		Name:   room.Spec.Director.Name,
+		Status: r.kubeToAPIStatus(room.Status.DirectorStatus),
 	})
 
-	for name, status := range room.Status.ActorStatuses {
+	for name, phase := range room.Status.ActorStatuses {
 		reports = append(reports, &api.Report{
 			Name:   name,
-			Status: r.kubeToAPIStatus(status.Phase),
+			Status: r.kubeToAPIStatus(phase),
 		})
 	}
 

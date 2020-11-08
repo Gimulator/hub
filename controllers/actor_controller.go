@@ -28,7 +28,7 @@ func newActorReconciler(client *client.Client, log logr.Logger) (*actorReconcile
 }
 
 func (a *actorReconciler) reconcileActor(ctx context.Context, room *hubv1.Room, actor *hubv1.Actor) error {
-	logger := a.Log.WithValues("reconciler", "Actor", "actor", actor.ID, "room", room.Spec.ID)
+	logger := a.Log.WithValues("reconciler", "Actor", "actor", actor.Name, "room", room.Spec.ID)
 
 	logger.Info("starting to reconcile actor's output PVC")
 	if err := a.reconcileOutputPVC(ctx, actor, room); err != nil {
@@ -57,14 +57,14 @@ func (a *actorReconciler) reconcileActor(ctx context.Context, room *hubv1.Room, 
 }
 
 func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.Actor, room *hubv1.Room) error {
-	quantity, err := resource.ParseQuantity(room.Spec.ProblemSettings.OutputVolumeSize)
+	quantity, err := resource.ParseQuantity(room.Spec.Setting.OutputVolumeSize)
 	if err != nil {
 		return err
 	}
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.OutputPVCName(actor.ID),
+			Name:      name.OutputPVCName(actor.Name),
 			Namespace: room.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -73,6 +73,8 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 					corev1.ResourceStorage: quantity,
 				},
 			},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			StorageClassName: &room.Spec.Setting.StorageClass,
 		},
 	}
 
@@ -80,34 +82,30 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 	return err
 }
 
-func (a *actorReconciler) updateActorStatus(room *hubv1.Room, actor *hubv1.Actor, pod *corev1.Pod) {
-	room.Status.ActorStatuses[actor.ID] = *pod.Status.DeepCopy()
-}
-
 func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room) (*corev1.Pod, error) {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
 	volumes = append(volumes, corev1.Volume{
-		Name: name.OutputVolumeName(actor.ID),
+		Name: name.OutputVolumeName(actor.Name),
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name.OutputPVCName(actor.ID),
+				ClaimName: name.OutputPVCName(actor.Name),
 			},
 		},
 	})
 
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      name.OutputVolumeName(actor.ID),
+		Name:      name.OutputVolumeName(actor.Name),
 		MountPath: name.OutputVolumeMountPath(),
 	})
 
-	if room.Spec.ProblemSettings.DataPVCName != "" {
+	if room.Spec.Setting.DataPVCName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: name.DataVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.ProblemSettings.DataPVCName,
+					ClaimName: room.Spec.Setting.DataPVCName,
 					ReadOnly:  true,
 				},
 			},
@@ -124,33 +122,38 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		name.RoleLabel():      actor.Role,
 		name.RoomLabel():      room.Spec.ID,
 		name.ProblemLabel():   room.Spec.ProblemID,
-		name.IDLabel():        actor.ID,
+		name.IDLabel():        actor.Name,
 	}
 
-	cpu, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceCPULimit)
+	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
 	if err != nil {
 		return nil, err
 	}
 
-	memory, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceMemoryLimit)
+	memory, err := resource.ParseQuantity(room.Spec.Setting.ResourceMemoryLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	ephemeral, err := resource.ParseQuantity(room.Spec.ProblemSettings.ResourceEphemeralLimit)
+	ephemeral, err := resource.ParseQuantity(room.Spec.Setting.ResourceEphemeralLimit)
 	if err != nil {
 		return nil, err
 	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.ActorPodName(actor.ID),
+			Name:      name.ActorPodName(actor.Name),
 			Namespace: room.Namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{
 			Volumes:       volumes,
 			RestartPolicy: corev1.RestartPolicyNever,
+			ImagePullSecrets: []corev1.LocalObjectReference{
+				{
+					Name: "registry-credentials",
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            name.ActorContainerName(),
@@ -175,8 +178,8 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 							Value: actor.Token,
 						},
 						{
-							Name:  "GIMULATOR_Name",
-							Value: actor.ID,
+							Name:  "GIMULATOR_NAME",
+							Value: actor.Name,
 						},
 					},
 					Resources: corev1.ResourceRequirements{
@@ -190,4 +193,10 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 			},
 		},
 	}, nil
+}
+
+func (a *actorReconciler) updateActorStatus(room *hubv1.Room, actor *hubv1.Actor, pod *corev1.Pod) {
+	phase := pod.Status.DeepCopy().Phase
+
+	room.Status.ActorStatuses[actor.Name] = phase
 }

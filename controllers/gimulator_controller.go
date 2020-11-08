@@ -15,6 +15,7 @@ import (
 	"github.com/Gimulator/hub/pkg/client"
 	"github.com/Gimulator/hub/pkg/config"
 	"github.com/Gimulator/hub/pkg/name"
+	"github.com/Gimulator/protobuf/go/api"
 )
 
 // gimulatorReconciler reconciles Gimulator for a Room
@@ -36,7 +37,7 @@ func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv
 
 	logger.Info("starting to reconcile rulse config map")
 	if err := g.reconcileRulesConfigMap(ctx, room); err != nil {
-		logger.Error(err, "could not reconcile rolse config map")
+		logger.Error(err, "could not reconcile rulse config map")
 		return err
 	}
 
@@ -74,7 +75,7 @@ func (g *gimulatorReconciler) reconcileGimulator(ctx context.Context, room *hubv
 
 func (g *gimulatorReconciler) reconcileRulesConfigMap(ctx context.Context, room *hubv1.Room) error {
 	key := types.NamespacedName{
-		Name:      name.RolesConfigMapName(room.Spec.ProblemID),
+		Name:      name.RulesConfigMapName(room.Spec.ProblemID),
 		Namespace: room.Namespace,
 	}
 
@@ -90,7 +91,7 @@ func (g *gimulatorReconciler) reconcileRulesConfigMap(ctx context.Context, room 
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.RolesConfigMapName(room.Spec.ProblemID),
+			Name:      name.RulesConfigMapName(room.Spec.ProblemID),
 			Namespace: room.Namespace,
 		},
 		Data: map[string]string{
@@ -106,25 +107,26 @@ func (g *gimulatorReconciler) reconcileRulesConfigMap(ctx context.Context, room 
 }
 
 func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context, room *hubv1.Room) error {
+	// TODO: change to string instead of api enums
 	type Cred struct {
 		Name      string `yaml:"name"`
-		Character string `yaml:"character"`
+		Character int32  `yaml:"character"`
 		Role      string `yaml:"role"`
 		Token     string `yaml:"token"`
 	}
 	creds := make([]Cred, 0)
 
 	creds = append(creds, Cred{
-		Name:      room.Spec.Director.ID,
+		Name:      room.Spec.Director.Name,
+		Character: int32(api.Character_director),
 		Role:      name.CharacterDirector(),
-		Character: name.CharacterDirector(),
 		Token:     room.Spec.Director.Token,
 	})
 
 	for _, actor := range room.Spec.Actors {
 		creds = append(creds, Cred{
-			Name:      actor.ID,
-			Character: name.CharacterActor(),
+			Name:      actor.Name,
+			Character: int32(api.Character_actor),
 			Role:      actor.Role,
 			Token:     actor.Token,
 		})
@@ -169,6 +171,8 @@ func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, roo
 				name.RoomLabel():      room.Spec.ID,
 				name.ProblemLabel():   room.Spec.ProblemID,
 			},
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
 
@@ -208,58 +212,47 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 			Containers: []corev1.Container{
 				{
 					Name:            name.GimulatorContainerName(),
-					Image:           room.Spec.ProblemSettings.GimulatorImage,
+					Image:           room.Spec.Setting.GimulatorImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GIMULATOR_HOST",
-							Value: "0.0.0.0" + strconv.Itoa(name.GimulatorServicePort()),
+							Value: "0.0.0.0:" + strconv.Itoa(name.GimulatorServicePort()),
 						},
 						{
 							Name:  "GIMULATOR_CONFIG_DIR",
 							Value: name.GimulatorConfigDir(),
 						},
 						{
-							Name: "GIMULATOR_S3_URL",
+							Name: "GIMULATOR_RABBIT_HOST",
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "s3-credential",
+										Name: "rabbit-credentials",
 									},
-									Key: "url",
+									Key: "host",
 								},
 							},
 						},
 						{
-							Name: "GIMULATOR_S3_ACCESS_KEY",
+							Name: "GIMULATOR_RABBIT_USERNAME",
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "s3-credential",
+										Name: "rabbit-credentials",
 									},
-									Key: "access-key",
+									Key: "username",
 								},
 							},
 						},
 						{
-							Name: "GIMULATOR_S3_SECRET_KEY",
+							Name: "GIMULATOR_RABBIT_PASSWORD",
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "s3-credential",
+										Name: "rabbit-credentials",
 									},
-									Key: "secret-key",
-								},
-							},
-						},
-						{
-							Name: "GIMULATOR_RABBIT_URL",
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "rabbit-credential",
-									},
-									Key: "url",
+									Key: "password",
 								},
 							},
 						},
@@ -268,7 +261,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "rabbit-credential",
+										Name: "rabbit-credentials",
 									},
 									Key: "result-queue",
 								},
@@ -277,13 +270,8 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
-							Name:      name.GimulatorRulesVolumeName(),
-							MountPath: name.GimulatorRulesVolumeMountPath(),
-							ReadOnly:  true,
-						},
-						{
-							Name:      name.GimulatorCredsVolumeName(),
-							MountPath: name.GimulatorCredsVolumeMountPath(),
+							Name:      name.GimulatorConfigVolumeName(),
+							MountPath: name.GimulatorConfigMountPath(),
 							ReadOnly:  true,
 						},
 					},
@@ -298,32 +286,35 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 			},
 			Volumes: []corev1.Volume{
 				{
-					Name: name.GimulatorRulesVolumeName(),
+					Name: name.GimulatorConfigVolumeName(),
 					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: name.RolesConfigMapName(room.Spec.ProblemID),
-							},
-							Items: []corev1.KeyToPath{
+						Projected: &corev1.ProjectedVolumeSource{
+							Sources: []corev1.VolumeProjection{
 								{
-									Key:  "data",
-									Path: "rules.yaml",
+									ConfigMap: &corev1.ConfigMapProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: name.RulesConfigMapName(room.Spec.ProblemID),
+										},
+										Items: []corev1.KeyToPath{
+											{
+												Key:  "data",
+												Path: "rules.yaml",
+											},
+										},
+									},
 								},
-							},
-						},
-					},
-				},
-				{
-					Name: name.GimulatorCredsVolumeName(),
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: name.CredConfigMapName(room.Spec.ID),
-							},
-							Items: []corev1.KeyToPath{
 								{
-									Key:  "data",
-									Path: "credentials.yaml",
+									ConfigMap: &corev1.ConfigMapProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: name.CredConfigMapName(room.Spec.ID),
+										},
+										Items: []corev1.KeyToPath{
+											{
+												Key:  "data",
+												Path: "credentials.yaml",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -335,5 +326,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 }
 
 func (g *gimulatorReconciler) updateGimulatorStatus(room *hubv1.Room, pod *corev1.Pod) {
-	room.Status.ActorStatuses[name.GimulatorContainerName()] = *pod.Status.DeepCopy()
+	phase := pod.Status.DeepCopy().Phase
+
+	room.Status.GimulatorStatus = phase
 }

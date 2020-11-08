@@ -42,8 +42,8 @@ func CredConfigMapName(id string) string {
 	return "credential-" + id
 }
 
-func RolesConfigMapName(id string) string {
-	return "roles-" + id
+func RulesConfigMapName(id string) string {
+	return "rules-" + id
 }
 
 // Gimulator
@@ -100,19 +100,11 @@ func OutputVolumeMountPath() string {
 	return "/output"
 }
 
-func GimulatorRulesVolumeName() string {
-	return "roles-volume"
+func GimulatorConfigVolumeName() string {
+	return "gimulator-config-volume"
 }
 
-func GimulatorRulesVolumeMountPath() string {
-	return GimulatorConfigDir()
-}
-
-func GimulatorCredsVolumeName() string {
-	return "credentials-volume"
-}
-
-func GimulatorCredsVolumeMountPath() string {
+func GimulatorConfigMountPath() string {
 	return GimulatorConfigDir()
 }
 
@@ -163,25 +155,25 @@ func CharacterGimulator() string {
 }
 
 // S3
-func S3ProblemSettingsBucket() string {
-	return "problem-settings"
+func S3SettingBucket() string {
+	return "settings"
 }
 
-func S3ProblemSettingsObjectName(id string) string {
-	return id + "-problem-settings.yaml"
+func S3SettingObjectName(id string) string {
+	return id + ".yaml"
 }
 
 func S3RulesBucket() string {
-	return "roles"
+	return "rules"
 }
 
 func S3RulesObjectName(id string) string {
-	return id + "-roles.yaml"
+	return id + ".yaml"
 }
 
 // Cache
-func CacheKeyForProblemSettings(id string) string {
-	return "problem-settings-" + id
+func CacheKeyForSetting(id string) string {
+	return "settings-" + id
 }
 
 func CacheKeyForRules(id string) string {

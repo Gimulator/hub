@@ -40,26 +40,36 @@ spec:
         - name: HUB_S3_URL
           valueFrom:
             secretKeyRef:
-              name: s3-credential
+              name: s3-credentials
               key: url
         - name: HUB_S3_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: s3-credential
+              name: s3-credentials
               key: access-key
         - name: HUB_S3_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: s3-credential
+              name: s3-credentials
               key: secret-key
-        - name: HUB_RABBIT_URL
+        - name: HUB_RABBIT_HOST
           valueFrom:
             secretKeyRef:
-              name: rabbit-credential
-              key: url
+              name: rabbit-credentials
+              key: host
+        - name: HUB_RABBIT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: rabbit-credentials
+              key: username
+        - name: HUB_RABBIT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rabbit-credentials
+              key: password
         - name: HUB_RABBIT_RESULT_QUEUE
           valueFrom:
             secretKeyRef:
-              name: rabbit-credential
+              name: rabbit-credentials
               key: result-queue
       terminationGracePeriodSeconds: 10
