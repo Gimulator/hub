@@ -1,7 +1,8 @@
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+COMMIT := $(shell git rev-parse --short HEAD)
+VERSION := $(shell git describe --tags ${COMMIT})
+PROJECTNAME := $(shell basename "$(PWD)")
+IMG ?= xerac/hub:${VERSION}
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -55,7 +56,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build . -t ${IMG}
 
 # Push the docker image
