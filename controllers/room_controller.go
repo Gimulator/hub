@@ -27,7 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
@@ -86,11 +88,12 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 
 // +kubebuilder:rbac:groups=hub.roboepics.com,resources=rooms,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hub.roboepics.com,resources=rooms/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=pod,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=pod/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=persistVolumeClaim,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles a request for a Room object
 func (r *RoomReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -225,6 +228,12 @@ func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error 
 func (r *RoomReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr)
 	builder = builder.For(&hubv1.Room{})
-	builder = builder.Owns(&corev1.Pod{})
+	builder = builder.Watches(
+		&source.Kind{Type: &corev1.Pod{}},
+		&handler.EnqueueRequestForOwner{
+			OwnerType: &hubv1.Room{},
+		},
+	)
+
 	return builder.Complete(r)
 }
