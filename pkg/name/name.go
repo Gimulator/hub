@@ -146,6 +146,10 @@ func CharacterDirector() string {
 	return api.Character_name[int32(api.Character_director)]
 }
 
+func CharacterOperator() string {
+	return api.Character_name[int32(api.Character_operator)]
+}
+
 func CharacterMaster() string {
 	return api.Character_name[int32(api.Character_master)]
 }

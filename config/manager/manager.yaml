@@ -72,4 +72,9 @@ spec:
             secretKeyRef:
               name: rabbit-credentials
               key: result-queue
+        - name: HUB_GIMULATOR_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: gimulator-credentials
+              key: hub-token
       terminationGracePeriodSeconds: 10

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"os"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -131,6 +132,14 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 			Token:     actor.Token,
 		})
 	}
+
+	token := os.Getenv("HUB_GIMULATOR_TOKEN")
+	creds = append(creds, Cred{
+		Name:      "hub-manager",
+		Character: int32(api.Character_operator),
+		Role:      name.CharacterOperator(),
+		Token:     token,
+	})
 
 	bytes, err := yaml.Marshal(creds)
 	if err != nil {
