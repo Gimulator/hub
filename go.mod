@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.68.0 // indirect
-	github.com/Gimulator/protobuf v0.0.0-20201104090827-c336a55a30a1
+	github.com/Gimulator/protobuf v0.0.0-20201112132511-27f3ca365f68
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-ini/ini v1.62.0 // indirect
 	github.com/go-logr/logr v0.2.1

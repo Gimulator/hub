@@ -111,7 +111,7 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 	// TODO: change to string instead of api enums
 	type Cred struct {
 		Name      string `yaml:"name"`
-		Character int32  `yaml:"character"`
+		Character string `yaml:"character"`
 		Role      string `yaml:"role"`
 		Token     string `yaml:"token"`
 	}
@@ -119,7 +119,7 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 
 	creds = append(creds, Cred{
 		Name:      room.Spec.Director.Name,
-		Character: int32(api.Character_director),
+		Character: api.Character_name[int32(api.Character_director)],
 		Role:      name.CharacterDirector(),
 		Token:     room.Spec.Director.Token,
 	})
@@ -127,7 +127,7 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 	for _, actor := range room.Spec.Actors {
 		creds = append(creds, Cred{
 			Name:      actor.Name,
-			Character: int32(api.Character_actor),
+			Character: api.Character_name[int32(api.Character_actor)],
 			Role:      actor.Role,
 			Token:     actor.Token,
 		})
@@ -136,7 +136,7 @@ func (g *gimulatorReconciler) reconcileCredentialsConfigMap(ctx context.Context,
 	token := os.Getenv("HUB_GIMULATOR_TOKEN")
 	creds = append(creds, Cred{
 		Name:      "hub-manager",
-		Character: int32(api.Character_operator),
+		Character: api.Character_name[int32(api.Character_operator)],
 		Role:      name.CharacterOperator(),
 		Token:     token,
 	})
