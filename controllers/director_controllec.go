@@ -216,6 +216,10 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 							Name:  "GIMULATOR_NAME",
 							Value: room.Spec.Director.Name,
 						},
+						{
+							Name:  "GIMULATOR_ROOM_ID",
+							Value: room.Spec.ID,
+						},
 					},
 					Resources: corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
