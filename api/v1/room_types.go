@@ -31,17 +31,19 @@ type Setting struct {
 
 // Actor defines some actor of a Room
 type Actor struct {
-	Name  string `json:"name"`
-	Image string `json:"image"`
-	Role  string `json:"role"`
-	Token string `json:"token,omitempty"`
+	Name  string          `json:"name"`
+	Image string          `json:"image"`
+	Role  string          `json:"role"`
+	Token string          `json:"token,omitempty"`
+	Envs  []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // Director defines the director of a Room
 type Director struct {
-	Name  string `json:"name"`
-	Image string `json:"image"`
-	Token string `json:"token,omitempty"`
+	Name  string          `json:"name"`
+	Image string          `json:"image"`
+	Token string          `json:"token,omitempty"`
+	Envs  []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // RoomSpec defines the desired state of Room

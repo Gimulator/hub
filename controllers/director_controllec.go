@@ -160,6 +160,35 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 		name.IDLabel():        room.Spec.Director.Name,
 	}
 
+	envs := room.Spec.Director.Envs
+	if envs == nil {
+		envs = make([]corev1.EnvVar, 0)
+	}
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_HOST",
+		Value: name.GimulatorHost(room.Spec.ID),
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_CHARACTER",
+		Value: name.CharacterDirector(),
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_ROLE",
+		Value: name.CharacterDirector(),
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_TOKEN",
+		Value: room.Spec.Director.Token,
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_NAME",
+		Value: room.Spec.Director.Name,
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_ROOM_ID",
+		Value: room.Spec.ID,
+	})
+
 	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
 	if err != nil {
 		return nil, err
@@ -195,32 +224,7 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 					Image:           room.Spec.Director.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
-					Env: []corev1.EnvVar{
-						{
-							Name:  "GIMULATOR_HOST",
-							Value: name.GimulatorHost(room.Spec.ID),
-						},
-						{
-							Name:  "GIMULATOR_CHARACTER",
-							Value: name.CharacterDirector(),
-						},
-						{
-							Name:  "GIMULATOR_ROLE",
-							Value: name.CharacterDirector(),
-						},
-						{
-							Name:  "GIMULATOR_TOKEN",
-							Value: room.Spec.Director.Token,
-						},
-						{
-							Name:  "GIMULATOR_NAME",
-							Value: room.Spec.Director.Name,
-						},
-						{
-							Name:  "GIMULATOR_ROOM_ID",
-							Value: room.Spec.ID,
-						},
-					},
+					Env:             envs,
 					Resources: corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:              cpu,

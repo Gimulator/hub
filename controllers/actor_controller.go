@@ -125,6 +125,31 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		name.IDLabel():        actor.Name,
 	}
 
+	envs := actor.Envs
+	if envs == nil {
+		envs = make([]corev1.EnvVar, 0)
+	}
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_HOST",
+		Value: name.GimulatorHost(room.Spec.ID),
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_CHARACTER",
+		Value: name.CharacterActor(),
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_ROLE",
+		Value: actor.Role,
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_TOKEN",
+		Value: actor.Token,
+	})
+	envs = append(envs, corev1.EnvVar{
+		Name:  "GIMULATOR_NAME",
+		Value: actor.Name,
+	})
+
 	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
 	if err != nil {
 		return nil, err
@@ -160,28 +185,7 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 					Image:           actor.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
-					Env: []corev1.EnvVar{
-						{
-							Name:  "GIMULATOR_HOST",
-							Value: name.GimulatorHost(room.Spec.ID),
-						},
-						{
-							Name:  "GIMULATOR_CHARACTER",
-							Value: name.CharacterActor(),
-						},
-						{
-							Name:  "GIMULATOR_ROLE",
-							Value: actor.Role,
-						},
-						{
-							Name:  "GIMULATOR_TOKEN",
-							Value: actor.Token,
-						},
-						{
-							Name:  "GIMULATOR_NAME",
-							Value: actor.Name,
-						},
-					},
+					Env:             envs,
 					Resources: corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:              cpu,
