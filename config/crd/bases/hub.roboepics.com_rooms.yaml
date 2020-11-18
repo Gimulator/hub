@@ -38,7 +38,7 @@ spec:
               items:
                 description: Actor defines some actor of a Room
                 properties:
-                  env:
+                  envs:
                     items:
                       description: EnvVar represents an environment variable present
                         in a Container.
@@ -163,7 +163,7 @@ spec:
             director:
               description: Director defines the director of a Room
               properties:
-                env:
+                envs:
                   items:
                     description: EnvVar represents an environment variable present
                       in a Container.

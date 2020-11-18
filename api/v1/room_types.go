@@ -35,7 +35,7 @@ type Actor struct {
 	Image string          `json:"image"`
 	Role  string          `json:"role"`
 	Token string          `json:"token,omitempty"`
-	Envs  []corev1.EnvVar `json:"env,omitempty"`
+	Envs  []corev1.EnvVar `json:"envs,omitempty"`
 }
 
 // Director defines the director of a Room
@@ -43,7 +43,7 @@ type Director struct {
 	Name  string          `json:"name"`
 	Image string          `json:"image"`
 	Token string          `json:"token,omitempty"`
-	Envs  []corev1.EnvVar `json:"env,omitempty"`
+	Envs  []corev1.EnvVar `json:"envs,omitempty"`
 }
 
 // RoomSpec defines the desired state of Room
