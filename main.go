@@ -54,7 +54,7 @@ func main() {
 	rabbitHost := os.Getenv("HUB_RABBIT_HOST")
 	rabbitUsername := os.Getenv("HUB_RABBIT_USERNAME")
 	rabbitPassword := os.Getenv("HUB_RABBIT_PASSWORD")
-	rabbitQueue := os.Getenv("HUB_RABBIT_QUEUE")
+	rabbitQueue := os.Getenv("HUB_RABBIT_RESULT_QUEUE")
 	token := os.Getenv("HUB_GIMULATOR_TOKEN")
 
 	var metricsAddr string
