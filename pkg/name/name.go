@@ -60,15 +60,15 @@ func GimulatorServicePort() int {
 }
 
 func GimulatorMemoryLimit() string {
-	return "200M"  // TODO should be set dynamically
+	return "200M" // TODO should be set dynamically
 }
 
 func GimulatorCPULimit() string {
-	return "1"  // TODO should be set dynamically
+	return "1" // TODO should be set dynamically
 }
 
 func GimulatorEphemeralLimit() string {
-	return "100M"  // TODO should be set dynamically
+	return "100M" // TODO should be set dynamically
 }
 
 func GimulatorHost(roomID string) string {

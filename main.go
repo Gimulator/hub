@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -66,6 +67,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
+	resyncPeriod := time.Duration(time.Second * 60)
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -73,6 +75,7 @@ func main() {
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "fa842ee4.roboepics.com",
 		Namespace:          namespace,
+		SyncPeriod:         &resyncPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
