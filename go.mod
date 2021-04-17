@@ -1,16 +1,14 @@
 module github.com/Gimulator/hub
 
-go 1.13
+go 1.16
 
 require (
 	cloud.google.com/go v0.68.0 // indirect
 	github.com/Gimulator/protobuf v0.0.0-20201112132511-27f3ca365f68
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-ini/ini v1.62.0 // indirect
-	github.com/go-logr/logr v0.2.1
-	github.com/go-logr/zapr v0.2.0 // indirect
+	github.com/go-logr/logr v0.3.0
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.5.2 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
@@ -18,26 +16,18 @@ require (
 	github.com/onsi/gomega v1.10.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/common v0.14.0 // indirect
-	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee // indirect
-	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb // indirect
-	golang.org/x/sys v0.0.0-20201014080544-cc95f250f6bc // indirect
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/grpc v1.32.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.19.2
-	k8s.io/apiextensions-apiserver v0.19.2 // indirect
-	k8s.io/apimachinery v0.19.2
-	k8s.io/client-go v0.19.2
-	k8s.io/klog/v2 v2.3.0 // indirect
-	k8s.io/utils v0.0.0-20201005171033-6301aaf42dc7 // indirect
-	sigs.k8s.io/controller-runtime v0.6.3
+	k8s.io/api v0.20.2
+	k8s.io/apimachinery v0.20.2
+	k8s.io/client-go v0.20.2
+	sigs.k8s.io/controller-runtime v0.8.3
 )
