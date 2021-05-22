@@ -173,14 +173,18 @@ func (r *RoomReconciler) Reconcile(cx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("starting to reconcile statuses")
+	logger.Info("starting to reconcile status and report it")
 	if shouldDelete, err := r.reporter.Report(ctx, room); err != nil {
-		logger.Error(err, "could not reconcile statuses")
+		logger.Error(err, "could not report")
 		return ctrl.Result{}, err
 	} else if shouldDelete {
-		return ctrl.Result{}, r.DeleteRoom(ctx, room)
+		if err := r.DeleteRoom(ctx, room); err != nil {
+			logger.Error(err, "could not reconcile statuses")
+			return ctrl.Result{}, err
+		}
 	}
 
+	logger.Info("end of reconciling")
 	return ctrl.Result{}, nil
 }
 
