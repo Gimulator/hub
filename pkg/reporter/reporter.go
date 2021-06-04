@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/mq"
@@ -77,10 +78,12 @@ func (r *Reporter) kubeToAPIStatus(phase corev1.PodPhase) api.Status {
 	return status
 }
 
-func (r *Reporter) informGimulator(context context.Context, room *hubv1.Room, reports []*api.Report) error {
+func (r *Reporter) informGimulator(ctx context.Context, room *hubv1.Room, reports []*api.Report) error {
 	address := name.GimulatorServiceName(room.Spec.ID) + ":" + strconv.Itoa(name.GimulatorServicePort())
 
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx2, address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return fmt.Errorf("could not connect to Gimulator with address=%v", address)
 	}
@@ -88,7 +91,7 @@ func (r *Reporter) informGimulator(context context.Context, room *hubv1.Room, re
 
 	client := api.NewOperatorAPIClient(conn)
 	for _, report := range reports {
-		ctx := metadata.AppendToOutgoingContext(context, "token", r.token)
+		ctx := metadata.AppendToOutgoingContext(ctx, "token", r.token)
 		if _, err := client.SetUserStatus(ctx, report); err != nil {
 			return err
 		}
