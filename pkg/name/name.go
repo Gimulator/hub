@@ -64,7 +64,7 @@ func GimulatorMemoryLimit() string {
 }
 
 func GimulatorCPULimit() string {
-	return "1" // TODO should be set dynamically
+	return "500m" // TODO should be set dynamically
 }
 
 func GimulatorEphemeralLimit() string {
