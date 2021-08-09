@@ -229,6 +229,10 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 							Value: "0.0.0.0:" + strconv.Itoa(name.GimulatorServicePort()),
 						},
 						{
+							Name:	"GIMULATOR_ID",
+							Value:	room.Spec.ID,
+						},
+						{
 							Name:  "GIMULATOR_CONFIG_DIR",
 							Value: name.GimulatorConfigDir(),
 						},
