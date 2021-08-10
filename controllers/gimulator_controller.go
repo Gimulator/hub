@@ -237,6 +237,10 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 							Value: name.GimulatorConfigDir(),
 						},
 						{
+							Name: "GIMULATOR_EPILOGUE_TYPE",
+							Value: "rabbitmq"
+						},
+						{
 							Name: "GIMULATOR_RABBIT_HOST",
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
