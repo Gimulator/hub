@@ -238,7 +238,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 						},
 						{
 							Name: "GIMULATOR_EPILOGUE_TYPE",
-							Value: "rabbitmq"
+							Value: "rabbitmq",
 						},
 						{
 							Name: "GIMULATOR_RABBIT_HOST",
