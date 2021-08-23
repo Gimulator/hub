@@ -7,7 +7,7 @@ require (
 	github.com/Gimulator/protobuf v0.0.0-20201112132511-27f3ca365f68
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-ini/ini v1.62.0 // indirect
-	github.com/go-logr/logr v1.0.0
+	github.com/go-logr/logr v0.4.0
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/onsi/ginkgo v1.16.4
