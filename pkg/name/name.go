@@ -76,8 +76,8 @@ func GimulatorHost(roomID string) string {
 }
 
 // Volumes
-func DataVolumeName() string {
-	return "data"
+func DataVolumeName(id string) string {
+	return "data-" + id
 }
 
 func DataVolumeMountPath() string {

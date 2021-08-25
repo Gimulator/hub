@@ -207,15 +207,32 @@ func (r *RoomReconciler) generateTokens(room *hubv1.Room) (bool, error) {
 }
 
 func (r *RoomReconciler) checkPVCs(ctx context.Context, room *hubv1.Room) error {
-	if room.Spec.Setting.DataPVCName != "" {
-		key := types.NamespacedName{
-			Name:      room.Spec.Setting.DataPVCName,
-			Namespace: room.Namespace,
-		}
-		if _, err := r.GetPVC(ctx, key); err != nil {
-			return err
+	if room.Spec.Setting.DataPVCNames == nil {
+		return nil
+	}
+	if room.Spec.Setting.DataPVCNames.Public != nil {
+		for _, pvcName := range room.Spec.Setting.DataPVCNames.Public {
+			key := types.NamespacedName{
+				Name:      pvcName,
+				Namespace: room.Namespace,
+			}
+			if _, err := r.GetPVC(ctx, key); err != nil {
+				return err
+			}
 		}
 	}
+	if room.Spec.Setting.DataPVCNames.Private != nil {
+		for _, pvcName := range room.Spec.Setting.DataPVCNames.Private {
+			key := types.NamespacedName{
+				Name:      pvcName,
+				Namespace: room.Namespace,
+			}
+			if _, err := r.GetPVC(ctx, key); err != nil {
+				return err
+			}
+		}
+	}
+
 	// if room.Spec.ProblemSettings.FactPVCName != "" {
 	// 	key := types.NamespacedName{
 	// 		Name:      room.Spec.ProblemSettings.FactPVCName,

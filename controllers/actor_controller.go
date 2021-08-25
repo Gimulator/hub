@@ -100,21 +100,25 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		MountPath: name.OutputVolumeMountPath(),
 	})
 
-	if room.Spec.Setting.DataPVCName != "" {
-		volumes = append(volumes, corev1.Volume{
-			Name: name.DataVolumeName(),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.Setting.DataPVCName,
+	if room.Spec.Setting.DataPVCNames != nil {
+		if room.Spec.Setting.DataPVCNames.Public != nil {
+			for _, pvcName := range room.Spec.Setting.DataPVCNames.Public {
+				volumes = append(volumes, corev1.Volume{
+					Name: name.DataVolumeName(pvcName),
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: pvcName,
+							ReadOnly:  true,
+						},
+					},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      name.DataVolumeName(pvcName),
+					MountPath: name.DataVolumeMountPath(),
 					ReadOnly:  true,
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      name.DataVolumeName(),
-			MountPath: name.DataVolumeMountPath(),
-			ReadOnly:  true,
-		})
+				})
+			}
+		}
 	}
 
 	labels := map[string]string{
@@ -150,19 +154,19 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 		Value: actor.Name,
 	})
 
-	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
-	if err != nil {
-		return nil, err
-	}
+	// Priorities for resource allocations:
+	// 1. room.Spec.Actors[].Resources
+	// 2. room.Spec.Setting.Roles[].Resources
+	// 3. room.Spec.Setting.DefaultResources
 
-	memory, err := resource.ParseQuantity(room.Spec.Setting.ResourceMemoryLimit)
-	if err != nil {
-		return nil, err
+	resources := room.Spec.Setting.DefaultResources
+	if roleSettings, ok := room.Spec.Setting.Roles[actor.Role]; ok {
+		if roleSettings.Resources != nil {
+			resources = *roleSettings.Resources
+		}
 	}
-
-	ephemeral, err := resource.ParseQuantity(room.Spec.Setting.ResourceEphemeralLimit)
-	if err != nil {
-		return nil, err
+	if actor.Resources != nil {
+		resources = *actor.Resources
 	}
 
 	return &corev1.Pod{
@@ -186,13 +190,7 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
 					Env:             envs,
-					Resources: corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:              cpu,
-							corev1.ResourceMemory:           memory,
-							corev1.ResourceEphemeralStorage: ephemeral,
-						},
-					},
+					Resources:       resources,
 				},
 			},
 		},
