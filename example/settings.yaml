@@ -9,26 +9,30 @@ dataPVCNames:
 outputVolumeSize: "1G" # or "500M"
 
 roles:
-  "role-1": 
+  role-1: 
     resources:
       requests:
         memory: "64Mi"
         cpu: "250m"
         ephemeral-storage: ""
+        storage: ""
       limits:
         memory: "128Mi"
         cpu: "500m"
         ephemeral-storage: ""
-  "role-2": 
+        storage: ""
+  role-2: 
     resources:
       requests:
         memory: "64Mi"
         cpu: "250m"
         ephemeral-storage: ""
+        storage: ""
       limits:
         memory: "128Mi"
         cpu: "500m"
         ephemeral-storage: ""
+        storage: ""
 
 defaultResources:
   requests:
@@ -55,3 +59,5 @@ gimulator:
       cpu: ""
       ephemeral-storage: ""
       storage: ""
+
+storageClass: ""
