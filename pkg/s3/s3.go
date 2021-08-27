@@ -1,10 +1,11 @@
 package s3
 
 import (
+	"io"
 	"os"
 
 	"github.com/minio/minio-go"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var s *minio.Client
@@ -26,13 +27,18 @@ func init() {
 }
 
 func GetStruct(bucket, name string, i interface{}) error {
-	obj, err := s.GetObject(bucket, name, minio.GetObjectOptions{})
+	reader, err := s.GetObject(bucket, name, minio.GetObjectOptions{})
 	if err != nil {
 		return err
 	}
-	defer obj.Close()
+	defer reader.Close()
 
-	if err := yaml.NewDecoder(obj).Decode(i); err != nil {
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(content, i); err != nil {
 		return err
 	}
 	return nil
