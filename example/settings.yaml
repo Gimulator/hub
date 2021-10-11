@@ -1,6 +1,63 @@
-dataPVCName: "name-of-data-pvc"
-gimulatorImage: "https://url/to/image"
+dataPVCNames: 
+  public:
+    - ""
+    - ""
+  private:
+    - ""
+    - ""
+
 outputVolumeSize: "1G" # or "500M"
-resourceCPULimit: "1" # or "500m"
-resourceMemoryLimit: "1G" # or "500M"
-resourceEphemeralLimit: "1G" # or "500M"
+
+roles:
+  role-1: 
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+        ephemeral-storage: ""
+        storage: ""
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+        ephemeral-storage: ""
+        storage: ""
+  role-2: 
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+        ephemeral-storage: ""
+        storage: ""
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+        ephemeral-storage: ""
+        storage: ""
+
+defaultResources:
+  requests:
+    memory: ""
+    cpu: ""
+    ephemeral-storage: ""
+    storage: ""
+  limits:
+    memory: ""
+    cpu: ""
+    ephemeral-storage: ""
+    storage: ""
+
+gimulator:
+  image: "xerac/gimulator:_"
+  resources:
+    requests:
+      memory: ""
+      cpu: ""
+      ephemeral-storage: ""
+      storage: ""
+    limits:
+      memory: ""
+      cpu: ""
+      ephemeral-storage: ""
+      storage: ""
+
+storageClass: ""
