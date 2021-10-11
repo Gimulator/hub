@@ -32,10 +32,66 @@ spec:
           spec:
             description: RoomSpec defines the desired state of Room
             properties:
+              gimulator:
+                description: Gimulator defins the gimulator of a room
+                properties:
+                  image:
+                    type: string
+                  resources:
+                    properties:
+                      requests:
+                        properties:
+                          memory:
+                            type: string
+                          cpu:
+                            type: string
+                          storage:
+                            type: string
+                          ephemeral-storage:
+                            type: string
+                        type: object
+                      limits:
+                        properties:
+                          memory:
+                            type: string
+                          cpu:
+                            type: string
+                          storage:
+                            type: string
+                          ephemeral-storage:
+                            type: string
+                        type: object
+                    type: object
+                type: object
               actors:
                 items:
                   description: Actor defines some actor of a Room
                   properties:
+                    resources:
+                      properties:
+                        requests:
+                          properties:
+                            memory:
+                              type: string
+                            cpu:
+                              type: string
+                            storage:
+                              type: string
+                            ephemeral-storage:
+                              type: string
+                          type: object
+                        limits:
+                          properties:
+                            memory:
+                              type: string
+                            cpu:
+                              type: string
+                            storage:
+                              type: string
+                            ephemeral-storage:
+                              type: string
+                          type: object
+                      type: object
                     envs:
                       items:
                         description: EnvVar represents an environment variable present in a Container.
@@ -132,6 +188,31 @@ spec:
               director:
                 description: Director defines the director of a Room
                 properties:
+                  resources:
+                    properties:
+                      requests:
+                        properties:
+                          memory:
+                            type: string
+                          cpu:
+                            type: string
+                          storage:
+                            type: string
+                          ephemeral-storage:
+                            type: string
+                        type: object
+                      limits:
+                        properties:
+                          memory:
+                            type: string
+                          cpu:
+                            type: string
+                          storage:
+                            type: string
+                          ephemeral-storage:
+                            type: string
+                        type: object
+                    type: object
                   envs:
                     items:
                       description: EnvVar represents an environment variable present in a Container.
@@ -227,26 +308,115 @@ spec:
                 type: string
               setting:
                 properties:
-                  dataPVCName:
-                    type: string
-                  gimulatorImage:
-                    type: string
+                  dataPVCNames:
+                    properties:
+                      public:
+                        items:
+                          type: string
+                        type: array
+                      private:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  roles:
+                    additionalProperties:
+                      properties: 
+                        resources:
+                          properties:
+                            requests:
+                              properties:
+                                memory:
+                                  type: string
+                                cpu:
+                                  type: string
+                                storage:
+                                  type: string
+                                ephemeral-storage:
+                                  type: string
+                              type: object
+                            limits:
+                              properties:
+                                memory:
+                                  type: string
+                                cpu:
+                                  type: string
+                                storage:
+                                  type: string
+                                ephemeral-storage:
+                                  type: string
+                              type: object
+                          type: object
+                      type: object
+                    type: object
+                  defaultResources:
+                    properties:
+                      resources:
+                        properties:
+                          requests:
+                            properties:
+                              memory:
+                                type: string
+                              cpu:
+                                type: string
+                              storage:
+                                type: string
+                              ephemeral-storage:
+                                type: string
+                            type: object
+                          limits:
+                            properties:
+                              memory:
+                                type: string
+                              cpu:
+                                type: string
+                              storage:
+                                type: string
+                              ephemeral-storage:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
+                  gimulator:
+                    properties:
+                      image:
+                        type: string
+                      resources:
+                        properties:
+                          requests:
+                            properties:
+                              memory:
+                                type: string
+                              cpu:
+                                type: string
+                              storage:
+                                type: string
+                              ephemeral-storage:
+                                type: string
+                            type: object
+                          limits:
+                            properties:
+                              memory:
+                                type: string
+                              cpu:
+                                type: string
+                              storage:
+                                type: string
+                              ephemeral-storage:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
+                    required:
+                    - image
                   outputVolumeSize:
-                    type: string
-                  resourceCPULimit:
-                    type: string
-                  resourceEphemeralLimit:
-                    type: string
-                  resourceMemoryLimit:
                     type: string
                   storageClass:
                     type: string
                 required:
-                - gimulatorImage
+                - gimulator
                 - outputVolumeSize
-                - resourceCPULimit
-                - resourceEphemeralLimit
-                - resourceMemoryLimit
+                - defaultResources
                 - storageClass
                 type: object
             required:

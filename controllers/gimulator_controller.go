@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -190,19 +189,28 @@ func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, roo
 }
 
 func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Pod, error) {
-	cpu, err := resource.ParseQuantity(name.GimulatorCPULimit())
-	if err != nil {
-		return nil, err
+	// Priorities for getting image name:
+	// 1. room.Spec.Gimulator.Image
+	// 2. room.Spec.Setting.Gimulator.Image
+
+	image := room.Spec.Setting.Gimulator.Image
+	if room.Spec.Gimulator != nil {
+		if room.Spec.Gimulator.Image != "" {
+			image = room.Spec.Gimulator.Image
+		}
 	}
 
-	memory, err := resource.ParseQuantity(name.GimulatorMemoryLimit())
-	if err != nil {
-		return nil, err
-	}
+	// Priorities for resource allocations:
+	// 1. room.Spec.Gimulator.Resources
+	// 2. room.Spec.Setting.Gimulator.Resources
+	// 3. room.Spec.Setting.DefaultResources
 
-	ephemeral, err := resource.ParseQuantity(name.GimulatorEphemeralLimit())
-	if err != nil {
-		return nil, err
+	resources := room.Spec.Setting.DefaultResources
+	if room.Spec.Setting.Gimulator.Resources != nil {
+		resources = *room.Spec.Setting.Gimulator.Resources
+	}
+	if room.Spec.Gimulator.Resources != nil {
+		resources = *room.Spec.Gimulator.Resources
 	}
 
 	return &corev1.Pod{
@@ -221,7 +229,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 			Containers: []corev1.Container{
 				{
 					Name:            name.GimulatorContainerName(),
-					Image:           room.Spec.Setting.GimulatorImage,
+					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env: []corev1.EnvVar{
 						{
@@ -229,15 +237,15 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 							Value: "0.0.0.0:" + strconv.Itoa(name.GimulatorServicePort()),
 						},
 						{
-							Name:	"GIMULATOR_ID",
-							Value:	room.Spec.ID,
+							Name:  "GIMULATOR_ID",
+							Value: room.Spec.ID,
 						},
 						{
 							Name:  "GIMULATOR_CONFIG_DIR",
 							Value: name.GimulatorConfigDir(),
 						},
 						{
-							Name: "GIMULATOR_EPILOGUE_TYPE",
+							Name:  "GIMULATOR_EPILOGUE_TYPE",
 							Value: "rabbitmq",
 						},
 						{
@@ -292,13 +300,7 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 							ReadOnly:  true,
 						},
 					},
-					Resources: corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:              cpu,
-							corev1.ResourceMemory:           memory,
-							corev1.ResourceEphemeralStorage: ephemeral,
-						},
-					},
+					Resources: resources,
 				},
 			},
 			Volumes: []corev1.Volume{

@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
@@ -101,21 +101,51 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 	// 	MountPath: name.OutputVolumeMountPath(),
 	// })
 
-	if room.Spec.Setting.DataPVCName != "" {
-		volumes = append(volumes, corev1.Volume{
-			Name: name.DataVolumeName(),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: room.Spec.Setting.DataPVCName,
+	if room.Spec.Setting.DataPVCNames != nil {
+		// Mounting Private PVCs
+		if room.Spec.Setting.DataPVCNames.Private != nil {
+			for _, pvcName := range room.Spec.Setting.DataPVCNames.Private {
+				fullName := strings.Join([]string{"private", pvcName}, "-")
+
+				volumes = append(volumes, corev1.Volume{
+					Name: name.DataVolumeName(fullName),
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: fullName,
+							ReadOnly:  true,
+						},
+					},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      name.DataVolumeName(fullName),
+					MountPath: name.DataVolumeMountPath(),
 					ReadOnly:  true,
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      name.DataVolumeName(),
-			MountPath: name.DataVolumeMountPath(),
-			ReadOnly:  true,
-		})
+				})
+			}
+		}
+
+		// Mounting Public PVCs
+		// Comment/remove this part if you believe this functionality is unnecessary
+		if room.Spec.Setting.DataPVCNames.Public != nil {
+			for _, pvcName := range room.Spec.Setting.DataPVCNames.Public {
+				fullName := strings.Join([]string{"public", pvcName}, "-")
+
+				volumes = append(volumes, corev1.Volume{
+					Name: name.DataVolumeName(fullName),
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: fullName,
+							ReadOnly:  true,
+						},
+					},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      name.DataVolumeName(fullName),
+					MountPath: name.DataVolumeMountPath(),
+					ReadOnly:  true,
+				})
+			}
+		}
 	}
 
 	// if room.Spec.ProblemSettings.FactPVCName != "" {
@@ -189,19 +219,13 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 		Value: room.Spec.ID,
 	})
 
-	cpu, err := resource.ParseQuantity(room.Spec.Setting.ResourceCPULimit)
-	if err != nil {
-		return nil, err
-	}
+	// Priorities for resource allocations:
+	// 1. room.Spec.Director.Resources
+	// 2. room.Spec.Setting.DefaultResources
 
-	memory, err := resource.ParseQuantity(room.Spec.Setting.ResourceMemoryLimit)
-	if err != nil {
-		return nil, err
-	}
-
-	ephemeral, err := resource.ParseQuantity(room.Spec.Setting.ResourceEphemeralLimit)
-	if err != nil {
-		return nil, err
+	resources := room.Spec.Setting.DefaultResources
+	if room.Spec.Director.Resources != nil {
+		resources = *room.Spec.Director.Resources
 	}
 
 	return &corev1.Pod{
@@ -225,13 +249,7 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					VolumeMounts:    volumeMounts,
 					Env:             envs,
-					Resources: corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:              cpu,
-							corev1.ResourceMemory:           memory,
-							corev1.ResourceEphemeralStorage: ephemeral,
-						},
-					},
+					Resources:       resources,
 				},
 			},
 		},

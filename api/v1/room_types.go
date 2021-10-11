@@ -19,40 +19,56 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PVCNames struct {
+	Public  []string `json:"public,omitempty" yaml:"public,omitempty"`
+	Private []string `json:"private,omitempty" yaml:"private,omitempty"`
+}
+
+type GimulatorSettings struct {
+	Image     string                       `json:"image" yaml:"image"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+type RoleSettings struct {
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
 type Setting struct {
-	DataPVCName            string `json:"dataPVCName,omitempty" yaml:"dataPVCName,omitempty"`
-	GimulatorImage         string `json:"gimulatorImage" yaml:"gimulatorImage"`
-	OutputVolumeSize       string `json:"outputVolumeSize" yaml:"outputVolumeSize"`
-	ResourceCPULimit       string `json:"resourceCPULimit" yaml:"resourceCPULimit"`
-	ResourceMemoryLimit    string `json:"resourceMemoryLimit" yaml:"resourceMemoryLimit"`
-	ResourceEphemeralLimit string `json:"resourceEphemeralLimit" yaml:"resourceEphemeralLimit"`
-	StorageClass           string `json:"storageClass" yaml:"storageClass"`
+	DataPVCNames     *PVCNames                   `json:"dataPVCNames,omitempty" yaml:"dataPVCNames,omitempty"`
+	Gimulator        *GimulatorSettings          `json:"gimulator" yaml:"gimulator"`
+	OutputVolumeSize string                      `json:"outputVolumeSize" yaml:"outputVolumeSize"`
+	DefaultResources corev1.ResourceRequirements `json:"defaultResources" yaml:"defaultResources"`
+	Roles            map[string]*RoleSettings    `json:"roles,omitempty" yaml:"roles,omitempty"`
+	StorageClass     string                      `json:"storageClass" yaml:"storageClass"`
 }
 
 // Actor defines some actor of a Room
 type Actor struct {
-	Name  string          `json:"name"`
-	Image string          `json:"image"`
-	Role  string          `json:"role"`
-	Token string          `json:"token,omitempty"`
-	Envs  []corev1.EnvVar `json:"envs,omitempty"`
+	Name      string                       `json:"name"`
+	Image     string                       `json:"image"`
+	Role      string                       `json:"role"`
+	Token     string                       `json:"token,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Envs      []corev1.EnvVar              `json:"envs,omitempty"`
 }
 
 // Director defines the director of a Room
 type Director struct {
-	Name  string          `json:"name"`
-	Image string          `json:"image"`
-	Token string          `json:"token,omitempty"`
-	Envs  []corev1.EnvVar `json:"envs,omitempty"`
+	Name      string                       `json:"name"`
+	Image     string                       `json:"image"`
+	Token     string                       `json:"token,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Envs      []corev1.EnvVar              `json:"envs,omitempty"`
 }
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	ID        string    `json:"id"`
-	ProblemID string    `json:"problemID"`
-	Setting   *Setting  `json:"setting,omitempty"`
-	Actors    []*Actor  `json:"actors"`
-	Director  *Director `json:"director"`
+	ID        string             `json:"id"`
+	ProblemID string             `json:"problemID"`
+	Setting   *Setting           `json:"setting,omitempty"`
+	Gimulator *GimulatorSettings `json:"gimulator,omitempty"`
+	Actors    []*Actor           `json:"actors"`
+	Director  *Director          `json:"director"`
 }
 
 // RoomStatus defines the observed state of Room
