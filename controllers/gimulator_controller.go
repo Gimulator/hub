@@ -209,8 +209,10 @@ func (g *gimulatorReconciler) gimulatorPodManifest(room *hubv1.Room) (*corev1.Po
 	if room.Spec.Setting.Gimulator.Resources != nil {
 		resources = *room.Spec.Setting.Gimulator.Resources
 	}
-	if room.Spec.Gimulator.Resources != nil {
-		resources = *room.Spec.Gimulator.Resources
+	if room.Spec.Gimulator != nil {
+		if room.Spec.Gimulator.Resources != nil {
+			resources = *room.Spec.Gimulator.Resources
+		}
 	}
 
 	return &corev1.Pod{
