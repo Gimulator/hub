@@ -111,14 +111,14 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 					Name: name.DataVolumeName(fullName),
 					VolumeSource: corev1.VolumeSource{
 						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: fullName,
+							ClaimName: pvcName,
 							ReadOnly:  true,
 						},
 					},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      name.DataVolumeName(fullName),
-					MountPath: name.DataVolumeMountPath(),
+					MountPath: name.DataVolumeMountPath(fullName),
 					ReadOnly:  true,
 				})
 			}
@@ -134,14 +134,14 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 					Name: name.DataVolumeName(fullName),
 					VolumeSource: corev1.VolumeSource{
 						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: fullName,
+							ClaimName: pvcName,
 							ReadOnly:  true,
 						},
 					},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      name.DataVolumeName(fullName),
-					MountPath: name.DataVolumeMountPath(),
+					MountPath: name.DataVolumeMountPath(fullName),
 					ReadOnly:  true,
 				})
 			}
