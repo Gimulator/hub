@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/pkg/client"
@@ -171,7 +172,9 @@ func (g *gimulatorReconciler) reconcileGimulatorService(ctx context.Context, roo
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port: int32(name.GimulatorServicePort()),
+					Port:       int32(name.GimulatorServicePort()),
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(int(name.GimulatorServicePort())),
 				},
 			},
 			Selector: map[string]string{
