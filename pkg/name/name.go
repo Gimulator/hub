@@ -80,8 +80,8 @@ func DataVolumeName(id string) string {
 	return "data-" + id
 }
 
-func DataVolumeMountPath() string {
-	return "/data"
+func DataVolumeMountPath(id string) string {
+	return "/data/" + id
 }
 
 func FactVolumeName() string {

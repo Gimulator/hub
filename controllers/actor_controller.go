@@ -114,7 +114,7 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      name.DataVolumeName(pvcName),
-					MountPath: name.DataVolumeMountPath(),
+					MountPath: name.DataVolumeMountPath(pvcName),
 					ReadOnly:  true,
 				})
 			}
