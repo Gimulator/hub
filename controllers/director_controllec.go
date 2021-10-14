@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
@@ -165,21 +166,27 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 	// 	})
 	// }
 
-	for _, actor := range room.Spec.Actors {
-		volumes = append(volumes, corev1.Volume{
-			Name: name.OutputVolumeName(actor.Name),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: name.OutputPVCName(actor.Name),
-					ReadOnly:  true,
+	outputVolumeSize, err := resource.ParseQuantity(room.Spec.Setting.OutputVolumeSize)
+	if err != nil {
+		return nil, err
+	}
+	if !outputVolumeSize.IsZero() {
+		for _, actor := range room.Spec.Actors {
+			volumes = append(volumes, corev1.Volume{
+				Name: name.OutputVolumeName(actor.Name),
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: name.OutputPVCName(actor.Name),
+						ReadOnly:  true,
+					},
 				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      name.OutputVolumeName(actor.Name),
-			MountPath: name.ActorOutputVolumeMountPathForDirector(actor.Name),
-			ReadOnly:  true,
-		})
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      name.OutputVolumeName(actor.Name),
+				MountPath: name.ActorOutputVolumeMountPathForDirector(actor.Name),
+				ReadOnly:  true,
+			})
+		}
 	}
 
 	labels := map[string]string{

@@ -62,6 +62,11 @@ func (a *actorReconciler) reconcileOutputPVC(ctx context.Context, actor *hubv1.A
 		return err
 	}
 
+	if quantity.IsZero() {
+		// Actor doesn't need an output PVC
+		return nil
+	}
+
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.OutputPVCName(actor.Name),
@@ -86,19 +91,25 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
-	volumes = append(volumes, corev1.Volume{
-		Name: name.OutputVolumeName(actor.Name),
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name.OutputPVCName(actor.Name),
+	outputVolumeSize, err := resource.ParseQuantity(room.Spec.Setting.OutputVolumeSize)
+	if err != nil {
+		return nil, err
+	}
+	if !outputVolumeSize.IsZero() {
+		volumes = append(volumes, corev1.Volume{
+			Name: name.OutputVolumeName(actor.Name),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: name.OutputPVCName(actor.Name),
+				},
 			},
-		},
-	})
+		})
 
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      name.OutputVolumeName(actor.Name),
-		MountPath: name.OutputVolumeMountPath(),
-	})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      name.OutputVolumeName(actor.Name),
+			MountPath: name.OutputVolumeMountPath(),
+		})
+	}
 
 	if room.Spec.Setting.DataPVCNames != nil {
 		if room.Spec.Setting.DataPVCNames.Public != nil {
