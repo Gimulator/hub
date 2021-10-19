@@ -43,15 +43,19 @@ func (a *actorReconciler) reconcileActor(ctx context.Context, room *hubv1.Room, 
 		return err
 	}
 
-	logger.Info("starting to sync actor's pod")
-	syncedActorPod, err := a.SyncPod(ctx, actorPod, room)
-	if err != nil {
-		logger.Error(err, "could not sync actor's pod")
-		return err
-	}
+	if room.Status.GimulatorStatus != corev1.PodRunning {
+		logger.Info("Actor's pod won't fire up since the gimulator is not ready yet. No syncing required.")
+	} else {
+		logger.Info("starting to sync actor's pod")
+		syncedActorPod, err := a.SyncPod(ctx, actorPod, room)
+		if err != nil {
+			logger.Error(err, "could not sync actor's pod")
+			return err
+		}
 
-	logger.Info("starting to update status of actor")
-	a.updateActorStatus(room, actor, syncedActorPod)
+		logger.Info("starting to update status of actor")
+		a.updateActorStatus(room, actor, syncedActorPod)
+	}
 
 	return nil
 }
