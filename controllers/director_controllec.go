@@ -44,16 +44,20 @@ func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.
 		return err
 	}
 
-	logger.Info("starting to sync director's pod")
-	syncedDirPod, err := a.SyncPod(ctx, dirPod, room)
-	if err != nil {
-		logger.Error(err, "could not sync director's pod")
-		return err
+	if room.Status.GimulatorStatus != corev1.PodRunning {
+		logger.Info("Director's pod won't fire up since the gimulator is not ready yet. No syncing required.")
+	} else {
+		logger.Info("starting to sync director's pod")
+		syncedDirPod, err := a.SyncPod(ctx, dirPod, room)
+		if err != nil {
+			logger.Error(err, "could not sync director's pod")
+			return err
+		}
+
+		logger.Info("starting to update status of director")
+		a.updateDirectorStatus(room, syncedDirPod)
 	}
-
-	logger.Info("starting to update status of director")
-	a.updateDirectorStatus(room, syncedDirPod)
-
+	
 	return nil
 }
 
