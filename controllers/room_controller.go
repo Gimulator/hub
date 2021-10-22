@@ -136,7 +136,7 @@ func (r *RoomReconciler) Reconcile(cx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	logger.Info("starting to fetch setting")
-	if err := config.FetchSetting(room); err != nil {
+	if err := config.FetchSetting(ctx, room); err != nil {
 		logger.Error(err, "could not fetch setting", "problem", room.Spec.ProblemID)
 		return ctrl.Result{}, err
 	}

@@ -1,10 +1,12 @@
 package s3
 
 import (
+	"context"
 	"io"
 	"os"
 
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"sigs.k8s.io/yaml"
 )
 
@@ -20,14 +22,17 @@ func init() {
 	}
 
 	var err error
-	s, err = minio.NewV2(s3URL, s3AccessKey, s3SecretKey, false)
+	s, err = minio.New(s3URL, &minio.Options{
+		Creds:  credentials.NewStaticV2(s3AccessKey, s3SecretKey, ""),
+		Secure: false,
+	})
 	if err != nil {
 		panic(err)
 	}
 }
 
-func GetStruct(bucket, name string, i interface{}) error {
-	reader, err := s.GetObject(bucket, name, minio.GetObjectOptions{})
+func GetStruct(ctx context.Context, bucket, name string, i interface{}) error {
+	reader, err := s.GetObject(ctx, bucket, name, minio.GetObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -44,8 +49,8 @@ func GetStruct(bucket, name string, i interface{}) error {
 	return nil
 }
 
-func GetBytes(bucket, name string) ([]byte, error) {
-	obj, err := s.GetObject(bucket, name, minio.GetObjectOptions{})
+func GetBytes(ctx context.Context, bucket, name string) ([]byte, error) {
+	obj, err := s.GetObject(ctx, bucket, name, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +65,7 @@ func GetBytes(bucket, name string) ([]byte, error) {
 	return b, err
 }
 
-func GetString(bucket, name string) (string, error) {
-	bytes, err := GetBytes(bucket, name)
+func GetString(ctx context.Context, bucket, name string) (string, error) {
+	bytes, err := GetBytes(ctx, bucket, name)
 	return string(bytes), err
 }
