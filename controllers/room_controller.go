@@ -54,12 +54,7 @@ type RoomReconciler struct {
 }
 
 // NewRoomReconciler returns new instance of RoomReconciler
-func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter) (*RoomReconciler, error) {
-	client, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
-	if err != nil {
-		return nil, err
-	}
-
+func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter, client *client.Client) (*RoomReconciler, error) {
 	gimulatorReconciler, err := newGimulatorReconciler(client, log)
 	if err != nil {
 		return nil, err

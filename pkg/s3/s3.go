@@ -69,3 +69,13 @@ func GetString(ctx context.Context, bucket, name string) (string, error) {
 	bytes, err := GetBytes(ctx, bucket, name)
 	return string(bytes), err
 }
+
+func PutObject(ctx context.Context, reader io.ReadCloser, bucket string, name string) error {
+	defer reader.Close()
+	if _, err := s.PutObject(ctx, bucket, name, reader, -1, minio.PutObjectOptions{
+		ContentType: "text/plain",
+	}); err != nil {
+		return err
+	}
+	return nil
+}

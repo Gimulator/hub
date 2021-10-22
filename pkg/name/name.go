@@ -159,6 +159,14 @@ func CharacterGimulator() string {
 }
 
 // S3
+func S3LogsBucket() string {
+	return "log"
+}
+
+func S3LogObjectName(prefix string, name string) string {
+	return fmt.Sprintf("%s/%s.log", prefix, name)
+}
+
 func S3SettingBucket() string {
 	return "settings"
 }
