@@ -163,8 +163,12 @@ func S3LogsBucket() string {
 	return "log"
 }
 
-func S3LogObjectName(prefix string, name string) string {
-	return fmt.Sprintf("%s/%s.log", prefix, name)
+func S3LogObjectNameForDirector(runId string, directorId string) string {
+	return fmt.Sprintf("%s/%s.log", runId, DirectorPodName(directorId))
+}
+
+func S3LogObjectNameForActor(runId string, actorId string) string {
+	return fmt.Sprintf("%s/%s.log", runId, ActorPodName(actorId))
 }
 
 func S3SettingBucket() string {

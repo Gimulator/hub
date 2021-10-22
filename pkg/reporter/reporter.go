@@ -153,7 +153,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 			return err
 		}
 
-		if err := s3.PutObject(ctx, stream, name.S3LogsBucket(), name.S3LogObjectName(room.Spec.ID, name.ActorPodName(actor.Name))); err != nil {
+		if err := s3.PutObject(ctx, stream, name.S3LogsBucket(), name.S3LogObjectNameForActor(room.Spec.ID, actor.Name)); err != nil {
 			return err
 		}
 	}
@@ -169,7 +169,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 		return err
 	}
 
-	if err := s3.PutObject(ctx, stream, name.S3LogsBucket(), name.S3LogObjectName(room.Spec.ID, "director")); err != nil {
+	if err := s3.PutObject(ctx, stream, name.S3LogsBucket(), name.S3LogObjectNameForDirector(room.Spec.ID, room.Spec.Director.Name)); err != nil {
 		return err
 	}
 
