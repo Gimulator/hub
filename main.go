@@ -29,6 +29,7 @@ import (
 
 	hubv1 "github.com/Gimulator/hub/api/v1"
 	"github.com/Gimulator/hub/controllers"
+	"github.com/Gimulator/hub/pkg/client"
 	"github.com/Gimulator/hub/pkg/mq"
 	"github.com/Gimulator/hub/pkg/reporter"
 	// +kubebuilder:scaffold:imports
@@ -89,14 +90,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	reporter, err := reporter.NewReporter(token, rabbit)
+	client, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
+	if err != nil {
+		setupLog.Error(err, "unable to create client instance")
+		os.Exit(1)
+	}
+
+	reporter, err := reporter.NewReporter(token, rabbit, client)
 	if err != nil {
 		setupLog.Error(err, "unable to create reporter instance")
 		os.Exit(1)
 	}
 
 	// Setting up room controller
-	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter)
+	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "room-controller")
 		os.Exit(1)

@@ -85,7 +85,7 @@ func (g *gimulatorReconciler) reconcileRulesConfigMap(ctx context.Context, room 
 		return nil
 	}
 
-	rules, err := config.FetchRules(room)
+	rules, err := config.FetchRules(ctx, room)
 	if err != nil {
 		return err
 	}

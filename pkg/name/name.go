@@ -159,6 +159,18 @@ func CharacterGimulator() string {
 }
 
 // S3
+func S3LogsBucket() string {
+	return "log"
+}
+
+func S3LogObjectNameForDirector(runID, directorID string) string {
+	return fmt.Sprintf("%s/%s.log", runID, DirectorPodName(directorID))
+}
+
+func S3LogObjectNameForActor(runID, actorID string) string {
+	return fmt.Sprintf("%s/%s.log", runID, ActorPodName(actorID))
+}
+
 func S3SettingBucket() string {
 	return "settings"
 }
