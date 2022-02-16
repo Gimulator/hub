@@ -18,20 +18,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type Reporter struct {
 	token  string
 	rabbit *mq.Rabbit
 	client *client.Client
+	k8sClientSet *kubernetes.Clientset
 }
 
-func NewReporter(token string, rabbit *mq.Rabbit, client *client.Client) (*Reporter, error) {
+func NewReporter(token string, rabbit *mq.Rabbit, client *client.Client, k8sClientSet *kubernetes.Clientset) (*Reporter, error) {
 	return &Reporter{
 		token:  token,
 		rabbit: rabbit,
 		client: client,
+		k8sClientSet: k8sClientSet,
 	}, nil
 }
 
@@ -45,6 +46,9 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		}
 		return true, nil
 	case corev1.PodRunning:
+		if shouldDelete, err := r.checkPodsForFailure(ctx, room); shouldDelete {
+			return true, err
+		}
 		return false, r.informGimulator(ctx, room, reports)
 	case corev1.PodFailed:
 		result := &api.Result{
@@ -62,6 +66,73 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		return false, nil
 	}
 }
+
+func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (bool, error) {
+	for actor, status := range room.Status.ActorStatuses {
+		if status == corev1.PodFailed {
+			key := types.NamespacedName{Name: name.ActorPodName(actor), Namespace: room.Namespace}
+			pod, err := r.client.GetPod(ctx, key)
+			if err != nil {
+				return true, err
+			}
+
+			var stream io.ReadCloser
+
+			if err := r.GetPodLogs(ctx, r.k8sClientSet, pod, &corev1.PodLogOptions{
+				Timestamps: true,
+				}, &stream); err != nil {
+				return true, err
+			}
+
+			log, err := io.ReadAll(stream)
+			if err != nil {
+				return true, err
+			}
+			
+			result := &api.Result{
+				Id:     room.Spec.ID,
+				Status: api.Result_failed,
+				Msg:    fmt.Sprintf("Actor faced an exception.\n%s", string(log)),
+			}
+			if err := r.informBackendRabbit(room, result); err != nil {
+				return true, err
+			}
+			return true, nil
+		}
+	}
+	if status := room.Status.DirectorStatus; status == corev1.PodFailed {
+		key := types.NamespacedName{Name: name.DirectorPodName(room.Spec.Director.Name), Namespace: room.Namespace}
+		pod, err := r.client.GetPod(ctx, key)
+		if err != nil {
+			return true, err
+		}
+
+		var stream io.ReadCloser
+
+		if err := r.GetPodLogs(ctx, r.k8sClientSet, pod, &corev1.PodLogOptions{
+			Timestamps: true,
+			}, &stream); err != nil {
+			return true, err
+		}
+
+		log, err := io.ReadAll(stream)
+		if err != nil {
+			return true, err
+		}
+		
+		result := &api.Result{
+			Id:     room.Spec.ID,
+			Status: api.Result_failed,
+			Msg:    fmt.Sprintf("Director faced an exception.\n%s", string(log)),
+		}
+		if err := r.informBackendRabbit(room, result); err != nil {
+			return true, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 
 func (r *Reporter) prepareReports(room *hubv1.Room) []*api.Report {
 	reports := make([]*api.Report, 0)
@@ -128,16 +199,6 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 		Timestamps: true,
 	}
 
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
-	clientSet, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
 	var stream io.ReadCloser
 
 	// Dumping logs
@@ -149,7 +210,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 			return err
 		}
 
-		if err := r.GetPodLogs(ctx, clientSet, actorPod, podLogOpts, &stream); err != nil {
+		if err := r.GetPodLogs(ctx, r.k8sClientSet, actorPod, podLogOpts, &stream); err != nil {
 			return err
 		}
 
@@ -165,7 +226,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 		return err
 	}
 
-	if err := r.GetPodLogs(ctx, clientSet, directorPod, podLogOpts, &stream); err != nil {
+	if err := r.GetPodLogs(ctx, r.k8sClientSet, directorPod, podLogOpts, &stream); err != nil {
 		return err
 	}
 
@@ -174,7 +235,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 	}
 
 	// Gimulator
-	// TODO: There's a freakin bug lying below. For some reason, gimulator logs can't make it to the S3.
+	// TODO: There's a freakin bug lying below. For some reason, gimulator logs can't make it to the S3. Yeah you might not need Gimulator's logs but still ... why is this happening?
 
 	// gimulatorKey := types.NamespacedName{Name: name.GimulatorPodName(room.Spec.ID), Namespace: room.Namespace}
 	// gimulatorPod, err := r.client.GetPod(ctx, gimulatorKey)
