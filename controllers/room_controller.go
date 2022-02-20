@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -35,6 +36,7 @@ import (
 	"github.com/Gimulator/hub/pkg/client"
 	"github.com/Gimulator/hub/pkg/config"
 	"github.com/Gimulator/hub/pkg/reporter"
+	"github.com/Gimulator/hub/pkg/timer"
 )
 
 var (
@@ -48,13 +50,15 @@ type RoomReconciler struct {
 	*gimulatorReconciler
 	*directorReconciler
 
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	reporter *reporter.Reporter
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	clientset *kubernetes.Clientset
+	reporter  *reporter.Reporter
+	timer     *timer.Timer
 }
 
 // NewRoomReconciler returns new instance of RoomReconciler
-func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter, client *client.Client) (*RoomReconciler, error) {
+func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter, client *client.Client, clientset *kubernetes.Clientset) (*RoomReconciler, error) {
 	gimulatorReconciler, err := newGimulatorReconciler(client, log)
 	if err != nil {
 		return nil, err
@@ -70,14 +74,21 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 		return nil, err
 	}
 
+	roomTimer, err := timer.NewTimer(clientset, ctrl.Log.WithName("timer"), reporter, client)
+	if err != nil {
+		return nil, err
+	}
+
 	return &RoomReconciler{
 		Log:                 log,
 		Scheme:              mgr.GetScheme(),
 		Client:              client,
+		clientset:           clientset,
 		actorReconciler:     actorReconciler,
 		gimulatorReconciler: gimulatorReconciler,
 		directorReconciler:  directorReconciler,
 		reporter:            reporter,
+		timer:               roomTimer,
 	}, nil
 }
 
@@ -161,6 +172,9 @@ func (r *RoomReconciler) Reconcile(cx context.Context, req ctrl.Request) (ctrl.R
 			return ctrl.Result{}, err
 		}
 	}
+
+	logger.Info("starting to sync timers")
+	r.timer.SyncTimers(room)
 
 	logger.Info("starting to sync room")
 	if _, err := r.SyncRoom(ctx, room); err != nil {

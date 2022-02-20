@@ -22,8 +22,10 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -96,14 +98,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	reporter, err := reporter.NewReporter(token, rabbit, client)
+	clientSetConfig, err := rest.InClusterConfig()
+	if err != nil {
+		setupLog.Error(err, "unable to get clientset config")	
+		os.Exit(1)
+	}
+
+	clientSet, err := kubernetes.NewForConfig(clientSetConfig)
+	if err != nil {
+		setupLog.Error(err, "unable to initialize k8s clientset")	
+		os.Exit(1)
+	}
+	
+	reporter, err := reporter.NewReporter(token, rabbit, client, clientSet)
 	if err != nil {
 		setupLog.Error(err, "unable to create reporter instance")
 		os.Exit(1)
 	}
 
 	// Setting up room controller
-	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client)
+	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client, clientSet)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "room-controller")
 		os.Exit(1)
