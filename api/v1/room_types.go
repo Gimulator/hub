@@ -63,13 +63,14 @@ type Director struct {
 
 // RoomSpec defines the desired state of Room
 type RoomSpec struct {
-	ID        string             `json:"id"`
-	ProblemID string             `json:"problemID"`
-	Setting   *Setting           `json:"setting,omitempty"`
-	Gimulator *GimulatorSettings `json:"gimulator,omitempty"`
-	Actors    []*Actor           `json:"actors"`
-	Director  *Director          `json:"director"`
-	Timeout   int64              `json:"timeout"`
+	ID                      string             `json:"id"`
+	ProblemID               string             `json:"problemID"`
+	Setting                 *Setting           `json:"setting,omitempty"`
+	Gimulator               *GimulatorSettings `json:"gimulator,omitempty"`
+	Actors                  []*Actor           `json:"actors"`
+	Director                *Director          `json:"director"`
+	Timeout                 int64              `json:"timeout"`
+	TerminateOnActorFailure bool               `json:"terminate_on_actor_failure"`
 }
 
 // RoomStatus defines the observed state of Room
