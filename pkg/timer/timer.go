@@ -65,7 +65,8 @@ func (t *Timer) SyncTimers(room *hubv1.Room) {
 }
 
 // startPodTimer measures the age of a running actor/director pod and kills the room if a pod's age exceeds the given limit.
-// Please note that this function DOES return an error object (if there's any) but because it's supposed to run as a goroutine you cannot actually receive/observe the given error. Error handling of this method needs some work.
+// Please note that this function DOES return an error object (if there's any) but because it's supposed to run as a goroutine you cannot actually receive/observe the given error.
+// TODO: Error handling of this method needs some work.
 func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 	ctx := context.TODO()
 
