@@ -74,11 +74,7 @@ func (r *Reporter) ReportTimeout(room *hubv1.Room, threshold int64) error {
 		Msg:    fmt.Sprintf("Timeout limit exceeded (%d seconds).", threshold),
 	}
 	// TODO: should write better result for backend
-	if err := r.informRabbit(room, result); err != nil {
-		return err
-	}
-	return nil
-
+	return r.informRabbit(room, result)
 }
 
 func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (bool, error) {
