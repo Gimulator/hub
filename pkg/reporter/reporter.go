@@ -21,17 +21,17 @@ import (
 )
 
 type Reporter struct {
-	token  string
-	rabbit *mq.Rabbit
-	client *client.Client
+	token        string
+	rabbit       *mq.Rabbit
+	client       *client.Client
 	k8sClientSet *kubernetes.Clientset
 }
 
 func NewReporter(token string, rabbit *mq.Rabbit, client *client.Client, k8sClientSet *kubernetes.Clientset) (*Reporter, error) {
 	return &Reporter{
-		token:  token,
-		rabbit: rabbit,
-		client: client,
+		token:        token,
+		rabbit:       rabbit,
+		client:       client,
 		k8sClientSet: k8sClientSet,
 	}, nil
 }
@@ -57,7 +57,7 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 			Msg:    "Gimulaor failed",
 		}
 		// TODO: should write better result for backend
-		if err := r.informBackendRabbit(room, result); err != nil {
+		if err := r.informRabbit(room, result); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -65,6 +65,20 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		// Gimulator is not still ready, We will inform it in the next call of reconciler
 		return false, nil
 	}
+}
+
+func (r *Reporter) ReportTimeout(room *hubv1.Room, threshold int64) error {
+	result := &api.Result{
+		Id:     room.Spec.ID,
+		Status: api.Result_failed,
+		Msg:    fmt.Sprintf("Timeout limit exceeded (%d seconds).", threshold),
+	}
+	// TODO: should write better result for backend
+	if err := r.informRabbit(room, result); err != nil {
+		return err
+	}
+	return nil
+
 }
 
 func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (bool, error) {
@@ -80,7 +94,7 @@ func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (b
 
 			if err := r.GetPodLogs(ctx, r.k8sClientSet, pod, &corev1.PodLogOptions{
 				Timestamps: true,
-				}, &stream); err != nil {
+			}, &stream); err != nil {
 				return true, err
 			}
 
@@ -88,13 +102,13 @@ func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (b
 			if err != nil {
 				return true, err
 			}
-			
+
 			result := &api.Result{
 				Id:     room.Spec.ID,
 				Status: api.Result_failed,
 				Msg:    fmt.Sprintf("Actor faced an exception.\n%s", string(log)),
 			}
-			if err := r.informBackendRabbit(room, result); err != nil {
+			if err := r.informRabbit(room, result); err != nil {
 				return true, err
 			}
 			return true, nil
@@ -111,7 +125,7 @@ func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (b
 
 		if err := r.GetPodLogs(ctx, r.k8sClientSet, pod, &corev1.PodLogOptions{
 			Timestamps: true,
-			}, &stream); err != nil {
+		}, &stream); err != nil {
 			return true, err
 		}
 
@@ -119,20 +133,19 @@ func (r *Reporter) checkPodsForFailure(ctx context.Context, room *hubv1.Room) (b
 		if err != nil {
 			return true, err
 		}
-		
+
 		result := &api.Result{
 			Id:     room.Spec.ID,
 			Status: api.Result_failed,
 			Msg:    fmt.Sprintf("Director faced an exception.\n%s", string(log)),
 		}
-		if err := r.informBackendRabbit(room, result); err != nil {
+		if err := r.informRabbit(room, result); err != nil {
 			return true, err
 		}
 		return true, nil
 	}
 	return false, nil
 }
-
 
 func (r *Reporter) prepareReports(room *hubv1.Room) []*api.Report {
 	reports := make([]*api.Report, 0)
@@ -186,7 +199,7 @@ func (r *Reporter) informGimulator(ctx context.Context, room *hubv1.Room, report
 	return nil
 }
 
-func (r *Reporter) informBackendRabbit(room *hubv1.Room, result *api.Result) error {
+func (r *Reporter) informRabbit(room *hubv1.Room, result *api.Result) error {
 	if err := r.rabbit.Send(result); err != nil {
 		return err
 	}

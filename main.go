@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// Setting up room controller
-	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client)
+	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client, clientSet)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "room-controller")
 		os.Exit(1)
