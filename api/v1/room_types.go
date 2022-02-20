@@ -69,6 +69,7 @@ type RoomSpec struct {
 	Gimulator *GimulatorSettings `json:"gimulator,omitempty"`
 	Actors    []*Actor           `json:"actors"`
 	Director  *Director          `json:"director"`
+	Timeout   int64              `json:"timeout"`
 }
 
 // RoomStatus defines the observed state of Room
