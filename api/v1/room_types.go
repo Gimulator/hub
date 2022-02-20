@@ -70,7 +70,7 @@ type RoomSpec struct {
 	Actors                  []*Actor           `json:"actors"`
 	Director                *Director          `json:"director"`
 	Timeout                 int64              `json:"timeout"`
-	TerminateOnActorFailure bool               `json:"terminate_on_actor_failure"`
+	TerminateOnActorFailure bool               `json:"terminateOnActorFailure"`
 }
 
 // RoomStatus defines the observed state of Room
