@@ -174,7 +174,7 @@ func (r *RoomReconciler) Reconcile(cx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	logger.Info("starting to sync timers")
-	r.timer.SyncTimers(room, room.Spec.Timeout)
+	r.timer.SyncTimers(room)
 
 	logger.Info("starting to sync room")
 	if _, err := r.SyncRoom(ctx, room); err != nil {

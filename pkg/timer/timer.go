@@ -40,8 +40,8 @@ func NewTimer(clientSet *kubernetes.Clientset, log logr.Logger, reporter *report
 
 // StartTimer initiates a timer for every actor/director pod if necessary
 // At the moment, every pod timer is supplied with the same threshold value but the code is ready to accept various values as threshold for any pod.
-func (t *Timer) SyncTimers(room *hubv1.Room, threshold int64) {
-	if threshold <= 0 {
+func (t *Timer) SyncTimers(room *hubv1.Room) {
+	if room.Spec.Timeout <= 0 {
 		return
 	}
 
@@ -49,7 +49,7 @@ func (t *Timer) SyncTimers(room *hubv1.Room, threshold int64) {
 	if _, ok := t.timers[directorPodName]; ok {
 		t.log.WithValues("podName", directorPodName).Info("Timer for pod exists.")
 	} else {
-		t.timers[directorPodName] = threshold
+		t.timers[directorPodName] = room.Spec.Timeout
 		go t.startPodTimer(directorPodName, room)
 	}
 
@@ -58,7 +58,7 @@ func (t *Timer) SyncTimers(room *hubv1.Room, threshold int64) {
 		if _, ok := t.timers[actorPodName]; ok {
 			t.log.WithValues("podName", actorPodName).Info("Timer for pod exists.")
 		} else {
-			t.timers[actorPodName] = threshold
+			t.timers[actorPodName] = room.Spec.Timeout
 			go t.startPodTimer(actorPodName, room)
 		}
 	}
