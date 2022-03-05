@@ -46,10 +46,15 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		}
 		return true, nil
 	case corev1.PodRunning:
-		if room.Spec.TerminateOnActorFailure {
-			return r.checkPodsForFailure(ctx, room)
+		if !room.Spec.TerminateOnActorFailure {
+			return false, r.informGimulator(ctx, room, reports)
 		}
-		return false, r.informGimulator(ctx, room, reports)
+
+		shouldDelete, err := r.checkPodsForFailure(ctx, room)
+		if err != nil {
+			return true, err
+		}
+		return shouldDelete, r.informGimulator(ctx, room, reports)
 	case corev1.PodFailed:
 		result := &api.Result{
 			Id:     room.Spec.ID,
