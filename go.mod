@@ -3,7 +3,7 @@ module github.com/Gimulator/hub
 go 1.17
 
 require (
-	github.com/Gimulator/protobuf v0.0.0-20201112132511-27f3ca365f68
+	github.com/Gimulator/protobuf v0.0.0-20220306110743-20442abce165
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/go-logr/logr v0.4.0
 	github.com/minio/minio-go/v7 v7.0.15
