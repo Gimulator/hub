@@ -102,9 +102,9 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 // +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles a request for a Room object
-func (r *RoomReconciler) Reconcile(cx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx, cancle := context.WithTimeout(context.TODO(), ReconcilationTimeout)
-	defer cancle()
+func (r *RoomReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), ReconcilationTimeout)
+	defer cancel()
 
 	logger := r.Log.WithValues("reconciler", "Room", "room", req.NamespacedName)
 	logger.Info("starting to reconcile room")
