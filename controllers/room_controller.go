@@ -52,13 +52,13 @@ type RoomReconciler struct {
 
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
-	clientset *kubernetes.Clientset
+	clientSet *kubernetes.Clientset
 	reporter  *reporter.Reporter
 	timer     *timer.Timer
 }
 
 // NewRoomReconciler returns new instance of RoomReconciler
-func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter, client *client.Client, clientset *kubernetes.Clientset) (*RoomReconciler, error) {
+func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.Reporter, client *client.Client, clientSet *kubernetes.Clientset) (*RoomReconciler, error) {
 	gimulatorReconciler, err := newGimulatorReconciler(client, log)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 		return nil, err
 	}
 
-	roomTimer, err := timer.NewTimer(clientset, ctrl.Log.WithName("timer"), reporter, client)
+	roomTimer, err := timer.NewTimer(clientSet, ctrl.Log.WithName("timer"), reporter, client)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 		Log:                 log,
 		Scheme:              mgr.GetScheme(),
 		Client:              client,
-		clientset:           clientset,
+		clientSet:           clientSet,
 		actorReconciler:     actorReconciler,
 		gimulatorReconciler: gimulatorReconciler,
 		directorReconciler:  directorReconciler,
@@ -122,12 +122,12 @@ func (r *RoomReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Re
 	// tokens should be generated one time in the life-cycle of a room,
 	// so we update room with generated tokens and then for next call of reconcile,
 	// we will do nothing
-	logger.Info("starting to generate tokens if neeeded")
+	logger.Info("starting to generate tokens if needed")
 	if wasGenerated, err := r.generateTokens(room); err != nil {
 		logger.Error(err, "cloud not generate tokens")
 		return ctrl.Result{}, err
 	} else if wasGenerated {
-		logger.Info(("starting to update room after generating tokens"))
+		logger.Info("starting to update room after generating tokens")
 
 		room.Status.DirectorStatus = corev1.PodUnknown
 		room.Status.GimulatorStatus = corev1.PodUnknown

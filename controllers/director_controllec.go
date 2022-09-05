@@ -57,7 +57,7 @@ func (a *directorReconciler) reconcileDirector(ctx context.Context, room *hubv1.
 		logger.Info("starting to update status of director")
 		a.updateDirectorStatus(room, syncedDirPod)
 	}
-	
+
 	return nil
 }
 
