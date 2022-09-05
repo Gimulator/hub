@@ -100,6 +100,7 @@ func NewRoomReconciler(mgr manager.Manager, log logr.Logger, reporter *reporter.
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 // Reconcile reconciles a request for a Room object
 func (r *RoomReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
