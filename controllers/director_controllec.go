@@ -92,6 +92,9 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
+	userId := int64(2000)
+	fsGroupChangePolicy := corev1.FSGroupChangeOnRootMismatch
+
 	// volumes = append(volumes, corev1.Volume{
 	// 	Name: name.OutputVolumeName(room.Spec.Director.ID),
 	// 	VolumeSource: corev1.VolumeSource{
@@ -262,6 +265,12 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 					Env:             envs,
 					Resources:       resources,
 				},
+			},
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser:           &userId,
+				RunAsGroup:          &userId,
+				FSGroup:             &userId,
+				FSGroupChangePolicy: &fsGroupChangePolicy,
 			},
 		},
 	}, nil

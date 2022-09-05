@@ -95,6 +95,9 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 
+	userId := int64(2000)
+	fsGroupChangePolicy := corev1.FSGroupChangeOnRootMismatch
+
 	outputVolumeSize, err := resource.ParseQuantity(room.Spec.Setting.OutputVolumeSize)
 	if err != nil {
 		return nil, err
@@ -207,6 +210,12 @@ func (a *actorReconciler) actorPodManifest(actor *hubv1.Actor, room *hubv1.Room)
 					Env:             envs,
 					Resources:       resources,
 				},
+			},
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser:           &userId,
+				RunAsGroup:          &userId,
+				FSGroup:             &userId,
+				FSGroupChangePolicy: &fsGroupChangePolicy,
 			},
 		},
 	}, nil
