@@ -260,7 +260,7 @@ func (a *directorReconciler) directorPodManifest(room *hubv1.Room) (*corev1.Pod,
 				{
 					Name:            name.DirectorContainerName(),
 					Image:           room.Spec.Director.Image,
-					ImagePullPolicy: corev1.PullIfNotPresent,
+					ImagePullPolicy: corev1.PullAlways, // TODO Find a way to pull the image by requesting it on-demand. We don't always have access to the docker daemon to delete the old image.
 					VolumeMounts:    volumeMounts,
 					Env:             envs,
 					Resources:       resources,
