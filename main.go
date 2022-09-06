@@ -70,7 +70,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	resyncPeriod := time.Duration(time.Second * 60)
+	resyncPeriod := time.Second * 60
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
+	controllerClient, err := client.NewClient(mgr.GetClient(), mgr.GetScheme())
 	if err != nil {
 		setupLog.Error(err, "unable to create client instance")
 		os.Exit(1)
@@ -100,24 +100,24 @@ func main() {
 
 	clientSetConfig, err := rest.InClusterConfig()
 	if err != nil {
-		setupLog.Error(err, "unable to get clientset config")	
+		setupLog.Error(err, "unable to get client set config")
 		os.Exit(1)
 	}
 
 	clientSet, err := kubernetes.NewForConfig(clientSetConfig)
 	if err != nil {
-		setupLog.Error(err, "unable to initialize k8s clientset")	
+		setupLog.Error(err, "unable to initialize k8s client set")
 		os.Exit(1)
 	}
-	
-	reporter, err := reporter.NewReporter(token, rabbit, client, clientSet)
+
+	reporterObj, err := reporter.NewReporter(token, rabbit, controllerClient, clientSet)
 	if err != nil {
 		setupLog.Error(err, "unable to create reporter instance")
 		os.Exit(1)
 	}
 
 	// Setting up room controller
-	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporter, client, clientSet)
+	roomReconciler, err := controllers.NewRoomReconciler(mgr, ctrl.Log.WithName("room-controller"), reporterObj, controllerClient, clientSet)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "room-controller")
 		os.Exit(1)

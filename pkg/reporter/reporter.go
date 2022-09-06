@@ -59,7 +59,7 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 		result := &api.Result{
 			Id:     room.Spec.ID,
 			Status: api.Result_failed,
-			Msg:    "Gimulaor failed",
+			Msg:    "Gimulator failed",
 		}
 		// TODO: should write better result for backend
 		if err := r.informRabbit(room, result); err != nil {
@@ -156,9 +156,9 @@ func (r *Reporter) prepareReports(room *hubv1.Room) []*api.Report {
 		Status: r.kubeToAPIStatus(room.Status.DirectorStatus),
 	})
 
-	for name, phase := range room.Status.ActorStatuses {
+	for actorName, phase := range room.Status.ActorStatuses {
 		reports = append(reports, &api.Report{
-			Name:   name,
+			Name:   actorName,
 			Status: r.kubeToAPIStatus(phase),
 		})
 	}
@@ -190,17 +190,17 @@ func (r *Reporter) informGimulator(ctx context.Context, room *hubv1.Room, report
 	}
 	defer conn.Close()
 
-	client := api.NewOperatorAPIClient(conn)
+	operatorClient := api.NewOperatorAPIClient(conn)
 	for _, report := range reports {
 		ctx := metadata.AppendToOutgoingContext(ctx, "token", r.token)
-		if _, err := client.SetUserStatus(ctx, report); err != nil {
+		if _, err := operatorClient.SetUserStatus(ctx, report); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *Reporter) informRabbit(room *hubv1.Room, result *api.Result) error {
+func (r *Reporter) informRabbit(_ *hubv1.Room, result *api.Result) error {
 	if err := r.rabbit.Send(result); err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (r *Reporter) informRabbit(room *hubv1.Room, result *api.Result) error {
 }
 
 func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error {
-	// Setting up K8s CLientSet
+	// Setting up K8s ClientSet
 	podLogOpts := &corev1.PodLogOptions{
 		Timestamps: true,
 	}
@@ -249,7 +249,7 @@ func (r *Reporter) informBackendS3(ctx context.Context, room *hubv1.Room) error 
 	}
 
 	// Gimulator
-	// TODO: There's a freakin bug lying below. For some reason, gimulator logs can't make it to the S3. Yeah you might not need Gimulator's logs but still ... why is this happening?
+	// TODO: There's a bug lying below. For some reason, gimulator logs can't make it to the S3. Yeah you might not need Gimulator's logs but still ... why is this happening?
 
 	// gimulatorKey := types.NamespacedName{Name: name.GimulatorPodName(room.Spec.ID), Namespace: room.Namespace}
 	// gimulatorPod, err := r.client.GetPod(ctx, gimulatorKey)
