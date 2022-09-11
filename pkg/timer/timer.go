@@ -13,7 +13,7 @@ import (
 	"github.com/Gimulator/hub/pkg/reporter"
 
 	corev1 "k8s.io/api/core/v1"
-	errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -21,7 +21,7 @@ import (
 type Timer struct {
 	clientSet *kubernetes.Clientset
 	hubClient *client.Client
-	timers    map[string]int64 // map each pod to the its timeout threshold
+	timers    map[string]uint64 // map each pod to its timeout threshold
 	log       logr.Logger
 	reporter  *reporter.Reporter
 }
@@ -32,7 +32,7 @@ func NewTimer(clientSet *kubernetes.Clientset, log logr.Logger, reporter *report
 	return &Timer{
 		clientSet: clientSet,
 		hubClient: client,
-		timers:    make(map[string]int64),
+		timers:    make(map[string]uint64),
 		log:       logger,
 		reporter:  reporter,
 	}, nil
@@ -113,7 +113,7 @@ func (t *Timer) waitForPod(ctx context.Context, room *hubv1.Room, podName string
 
 			// Pod is not found
 			if notFoundRetries -= 1; notFoundRetries == -1 {
-				return time.Time{}, fmt.Errorf("Could not find pod '%s'", podName)
+				return time.Time{}, fmt.Errorf("could not find pod '%s'", podName)
 			}
 			continue
 		}

@@ -72,11 +72,11 @@ func (r *Reporter) Report(ctx context.Context, room *hubv1.Room) (bool, error) {
 	}
 }
 
-func (r *Reporter) ReportTimeout(room *hubv1.Room, threshold int64) error {
+func (r *Reporter) ReportTimeout(room *hubv1.Room, threshold uint64) error {
 	result := &api.Result{
 		Id:     room.Spec.ID,
 		Status: api.Result_failed,
-		Msg:    fmt.Sprintf("Timeout limit exceeded (%d seconds).", threshold),
+		Msg:    fmt.Sprintf("Timeout limit exceeded (%v seconds).", threshold),
 	}
 	// TODO: should write better result for backend
 	return r.informRabbit(room, result)
