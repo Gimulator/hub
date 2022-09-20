@@ -48,13 +48,13 @@ func (t *Timer) SyncTimers(room *hubv1.Room) {
 		return
 	}
 
-	directorPodName := name.DirectorPodName(room.Spec.Director.Name)
-	if _, ok := t.timers[directorPodName]; ok {
-		t.log.WithValues("podName", directorPodName).Info("Timer for pod exists.")
-	} else {
-		t.timers[directorPodName] = room.Spec.Timeout
-		go t.startPodTimer(directorPodName, room)
-	}
+	//directorPodName := name.DirectorPodName(room.Spec.Director.Name)
+	//if _, ok := t.timers[directorPodName]; ok {
+	//	t.log.WithValues("podName", directorPodName).Info("Timer for pod exists.")
+	//} else {
+	//	t.timers[directorPodName] = room.Spec.Timeout
+	//	go t.startPodTimer(directorPodName, room)
+	//}
 
 	for _, actor := range room.Spec.Actors {
 		actorPodName := name.ActorPodName(actor.Name)
@@ -106,7 +106,7 @@ func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 
 	// Kill all pod timers related to this room
 	t.mutex.Lock()
-	delete(t.timers, name.DirectorPodName(room.Spec.Director.Name))
+	//delete(t.timers, name.DirectorPodName(room.Spec.Director.Name))
 	for _, actor := range room.Spec.Actors {
 		delete(t.timers, name.ActorPodName(actor.Name))
 	}
