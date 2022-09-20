@@ -3,6 +3,7 @@ package timer
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,7 @@ type Timer struct {
 	clientSet *kubernetes.Clientset
 	hubClient *client.Client
 	timers    map[string]uint64 // map each pod to its timeout threshold
+	mutex     sync.Mutex
 	log       logr.Logger
 	reporter  *reporter.Reporter
 }
@@ -38,6 +40,7 @@ func NewTimer(clientSet *kubernetes.Clientset, log logr.Logger, reporter *report
 	}, nil
 }
 
+// SyncTimers
 // StartTimer initiates a timer for every actor/director pod if necessary
 // At the moment, every pod timer is supplied with the same threshold value but the code is ready to accept various values as threshold for any pod.
 func (t *Timer) SyncTimers(room *hubv1.Room) {
@@ -67,6 +70,7 @@ func (t *Timer) SyncTimers(room *hubv1.Room) {
 // startPodTimer measures the age of a running actor/director pod and kills the room if a pod's age exceeds the given limit.
 // Please note that this function DOES return an error object (if there's any) but because it's supposed to run as a goroutine you cannot actually receive/observe the given error.
 // TODO: Error handling of this method needs some work.
+// TODO will be more efficient to use time.NewTimer
 func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 	ctx := context.TODO()
 
@@ -76,27 +80,40 @@ func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 	}
 
 	for {
-		// TODO: I think we could use time.NewTimer here. But it's almost 3AM and I can't afford any more brain cells. I'll do it the easy way.
-		if diff := time.Now().Sub(startTime); diff.Seconds() > float64(t.timers[podName]) {
-			// limit has been exceeded. Must report and terminate the room.
-			t.log.Info(fmt.Sprintf("Pod '%s' has reached the timeout threshold. Terminating the room.", podName))
+		timeout, ok := t.timers[podName]
 
-			// Report result to rabbit
-			if err := t.reporter.ReportTimeout(room, t.timers[podName]); err != nil {
-				return err
-			}
-
-			// Kill all pod timers related to this room
-			delete(t.timers, name.DirectorPodName(room.Spec.Director.Name))
-			for _, actor := range room.Spec.Actors {
-				delete(t.timers, name.ActorPodName(actor.Name))
-			}
-
-			// Delete the room
-			return t.hubClient.DeleteRoom(ctx, room)
+		// The timer has been deleted by another goroutine
+		// FIXME use a better approach to avoid this
+		if !ok {
+			return nil
 		}
+
+		// Pod time has reached the timeout
+		if diff := time.Now().Sub(startTime); diff.Seconds() > float64(timeout) {
+			break
+		}
+
 		time.Sleep(time.Second * 2)
 	}
+
+	// limit has been exceeded. Must report and terminate the room.
+	t.log.Info(fmt.Sprintf("Pod '%s' has reached the timeout threshold. Terminating the room.", podName))
+
+	// Report result to rabbit
+	if err := t.reporter.ReportTimeout(room, t.timers[podName]); err != nil {
+		return err
+	}
+
+	// Kill all pod timers related to this room
+	t.mutex.Lock()
+	delete(t.timers, name.DirectorPodName(room.Spec.Director.Name))
+	for _, actor := range room.Spec.Actors {
+		delete(t.timers, name.ActorPodName(actor.Name))
+	}
+	t.mutex.Unlock()
+
+	// Delete the room
+	return t.hubClient.DeleteRoom(ctx, room)
 }
 
 // waitForPod waits until the pod is in Running phase and then returns the time its status has changed to running state.
