@@ -70,20 +70,32 @@ func (t *Timer) SyncTimers(room *hubv1.Room) {
 // startPodTimer measures the age of a running actor/director pod and kills the room if a pod's age exceeds the given limit.
 // Please note that this function DOES return an error object (if there's any) but because it's supposed to run as a goroutine you cannot actually receive/observe the given error.
 // TODO: Error handling of this method needs some work.
-// TODO will be more efficient to use time.NewTimer
+// TODO: Will be more efficient to use time.NewTimer
 func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 	ctx := context.TODO()
 
 	startTime, err := t.waitForPod(ctx, room, podName, -1) // TODO: not sure if notFoundThreshold should be dynamic or not.
 	if err != nil {
+		t.deleteTimer(podName)
 		return err
 	}
 
 	for {
+		isRunning, err := t.isPodRunning(ctx, room, podName)
+		if err != nil {
+			t.deleteTimer(podName)
+			return err
+		}
+
+		if !isRunning {
+			t.deleteTimer(podName)
+			return nil
+		}
+
 		timeout, ok := t.timers[podName]
 
 		// The timer has been deleted by another goroutine
-		// FIXME use a better approach to avoid this
+		// FIXME: Use a better approach to avoid this
 		if !ok {
 			return nil
 		}
@@ -104,13 +116,8 @@ func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 		return err
 	}
 
-	// Kill all pod timers related to this room
-	t.mutex.Lock()
-	//delete(t.timers, name.DirectorPodName(room.Spec.Director.Name))
-	for _, actor := range room.Spec.Actors {
-		delete(t.timers, name.ActorPodName(actor.Name))
-	}
-	t.mutex.Unlock()
+	// Kill all the timers for the room since it's timed out
+	t.deleteTimers(room)
 
 	// Delete the room
 	return t.hubClient.DeleteRoom(ctx, room)
@@ -121,9 +128,10 @@ func (t *Timer) startPodTimer(podName string, room *hubv1.Room) error {
 func (t *Timer) waitForPod(ctx context.Context, room *hubv1.Room, podName string, notFoundRetries int) (time.Time, error) {
 	var pod *corev1.Pod
 	var err error
+
 	for {
-		time.Sleep(time.Second * 1)
 		if pod, err = t.clientSet.CoreV1().Pods(room.Namespace).Get(ctx, podName, metav1.GetOptions{}); err != nil {
+			// Return the error if retrieving the pod had any errors other than "Not Found"
 			if !errors.IsNotFound(err) {
 				return time.Time{}, err
 			}
@@ -142,5 +150,44 @@ func (t *Timer) waitForPod(ctx context.Context, room *hubv1.Room, podName string
 				return containerStatus.State.Running.StartedAt.Time, nil
 			}
 		}
+
+		time.Sleep(time.Second * 1)
 	}
+}
+
+// isPodRunning checks if the pod is in running state or not.
+func (t *Timer) isPodRunning(ctx context.Context, room *hubv1.Room, podName string) (bool, error) {
+	var pod *corev1.Pod
+	var err error
+
+	if pod, err = t.clientSet.CoreV1().Pods(room.Namespace).Get(ctx, podName, metav1.GetOptions{}); err != nil {
+		return false, err
+	}
+
+	// Pod has been found. Checking if its container is in terminated state
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		t.log.Info(fmt.Sprintf("Pod %s => %v", podName, pod.Status.ContainerStatuses))
+		if containerStatus.State.Terminated != nil {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// deleteTimers kills all the timers for a room.
+func (t *Timer) deleteTimers(room *hubv1.Room) {
+	//t.deleteTimer(name.DirectorPodName(room.Spec.Director.Name))
+	for _, actor := range room.Spec.Actors {
+		t.deleteTimer(name.ActorPodName(actor.Name))
+	}
+}
+
+// deleteTimer kills the timer for a pod.
+func (t *Timer) deleteTimer(podName string) {
+	t.mutex.Lock()
+
+	delete(t.timers, name.ActorPodName(podName))
+
+	t.mutex.Unlock()
 }
